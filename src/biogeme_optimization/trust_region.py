@@ -344,7 +344,6 @@ def newton_trust_region(
 
     """
 
-    k = 0
     current_iterate = starting_point
     fct.set_variables(current_iterate)
     value_function, gradient, hessian = fct.f_g_h()
