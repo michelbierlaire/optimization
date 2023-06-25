@@ -9,8 +9,6 @@ Functions for the BFGS algorithm
 import logging
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
-from biogeme_optimization.function import relative_gradient
-from biogeme_optimization.algebra import schnabel_eskow_direction
 
 logger = logging.getLogger(__name__)
 
@@ -66,15 +64,17 @@ def inverse_bfgs(inverse_hessian_approx, delta_x, delta_g):
     :return: updated approximation of the inverse of the Hessian.
     :rtype: numpy.array (2D)
     """
-    n = len(delta_x)
+    dimension = len(delta_x)
 
     denom = np.inner(delta_x, delta_g)
     if denom <= 0.0:
-        raise OptimizationError(f"Unable to perform BFGS update as d'y = {denom} <= 0")
+        raise OptimizationError(
+            f"Unable to perform inverse BFGS update as d'y = {denom} <= 0"
+        )
     d_y = np.outer(delta_x, delta_g)
     y_d = np.outer(delta_g, delta_x)
     d_d = np.outer(delta_x, delta_x)
-    eye = np.identity(n)
+    eye = np.identity(dimension)
     return (
         (eye - (d_y / denom)) @ inverse_hessian_approx @ (eye - (y_d / denom))
     ) + d_d / denom
