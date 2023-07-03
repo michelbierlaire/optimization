@@ -4,7 +4,9 @@ Various optimization algorithms used for teaching and research
 
 ## References
 
-- Bierlaire, M. (2015). Optimization: Principles and Algortihms. EPFL Press.
+- Bierlaire, M. (2015). [Optimization: Principles and
+  Algortihms](https://transp-or.epfl.ch/books/optimization/html/OptimizationPrinciplesAlgorithms2018.pdf). EPFL
+  Press.
 - Conn, A. R., Gould, N. I. M and Toint, Ph. L. (1988) [Testing a
   Class of Methods for Solving Minimization Problems with Simple
   Bounds on the
