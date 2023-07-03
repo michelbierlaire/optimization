@@ -3,28 +3,51 @@ Various optimization algorithms used for teaching and research
 
 The package contains the following modules:
 
-## algebra.py
+## algebra
 It contains functions dealing with linear algebra:
-- A modified 
-## bfgs.py
 
-## bounds.py
+- A modified Cholesky factorization introduced by Schnabel and Eskow (1999)
+- The calculation of a descent direction based on this factorization.
 
-## diagnostics.py
+## bfgs
+The functions in this module calculate 
 
-## exceptions.py
+- the BFGS update of the hessian approximation (see Eq. (13.12) in Bierlaire (2015)),
+- the inverse BFGS update of the hessian approximation (see Eq. (13.13) in Bierlaire (2015)).
 
-## format.py
+## bounds
+This module mainly defines the class `Bounds`that manages the bound constraints.
 
-## function.py
+## diagnostics
+This module defines the diagnostic of some optimization subproblems
+(dogleg, and comjugate gradient).
 
-## hybrid_function.py
+## exceptions
+It defines the `OptimizationError` exception.
 
-## linesearch.py
+## format
+It defines the class `FormattedColumns` that formats the information
+reported at each iteration of an algorithm.
 
-## simple_bounds.py
+## function
+It defines the abstract class `FunctionToMinimize` that encapsulate
+the calculation of the objective function and its derivatives.
 
-## trust_region.py
+## hybrid_function
+It defines the class `HybridFunction` that calculates the objective
+function and its derivatives, where the second derivative can be
+either the analytical hessian, or a BFGS approximation.
+
+## linesearch
+This module implements the line search algorithms (see Chapter 11 in Bierlaire, 2015).
+
+## simple_bounds
+This module implements the minimization algorithm under bound
+constraints proposed by Conn et al. (1988).
+
+## trust_region
+This module implements the trust region algorithms (see Chapter 12 in
+Bierlaire, 2015).
 
 ## References
 
