@@ -620,8 +620,8 @@ class Bounds:
         :return: the projected direction
         :rtype: numpy.array
 
-        :raises biogeme.exceptions.OptimizationError: if the dimensions are inconsistent
-        :raises biogeme.exceptions.OptimizationError: if the current point is infeasible
+        :raises OptimizationError: if the dimensions are inconsistent
+        :raises OptimizationError: if the current point is infeasible
 
         """
         activity_status = self.activity(x_current)
