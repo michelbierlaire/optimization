@@ -8,6 +8,7 @@ Tests for the hybrid_function module
 import numpy as np
 import unittest
 from biogeme_optimization.bfgs import bfgs
+from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.function import FunctionData
 from biogeme_optimization.hybrid_function import HybridFunction
 from examples import MyFunctionToMinimize
@@ -19,7 +20,8 @@ class TestHybridFunction(unittest.TestCase):
         self.dimension = 3
         self.function = MyFunctionToMinimize(self.dimension)
         self.proportion = 0.5
-        self.hybrid_func = HybridFunction(self.function, self.proportion)
+        self.bounds = Bounds([(None, None), (None, None), (None, None),])
+        self.hybrid_func = HybridFunction(self.function, self.proportion, self.bounds)
 
     def test_calculate_function_and_derivatives_analytical(self):
         # Test when analytical Hessian is used
