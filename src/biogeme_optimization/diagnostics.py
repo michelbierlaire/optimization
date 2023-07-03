@@ -20,7 +20,7 @@ class DoglegDiagnostic(Enum):
 
 
 class ConjugateGradientDiagnostic(Enum):
-    """Possible outcomes of the dogleg method"""
+    """Possible outcomes of the conjugate gradient method"""
 
     CONVERGENCE = auto()
     OUT_OF_TRUST_REGION = auto()
