@@ -5,89 +5,43 @@
 
 Functions for line search algorithms
 """
+from abc import ABC, abstractmethod
 import logging
 import numpy as np
-from abc import abstractmethod
 from biogeme_optimization.exceptions import OptimizationError
-from biogeme_optimization.function import relative_gradient
 from biogeme_optimization.bfgs import inverse_bfgs
 from biogeme_optimization.algebra import schnabel_eskow_direction
 
 logger = logging.getLogger(__name__)
 
-class DirectionManagement:
-    """ Abstract class for the generation of a descent direction.
-    """
 
-    @abstractmethod
-    def get_direction(self, iterate, delta_x=None, delta_g=None):
-        """Obtain a descent direction
-        
-        :param iterate: current iterate
-        :type iterate: numpy.array (n x 1)
+class DirectionManagement(ABC):
+    """Abstract class for the generation of a descent direction."""
 
-        :param delta_x: difference of the two consecutive iterates
-        :type delta_x: numpy.array (n x 1)
+    def __init__(self, function):
+        """Constructor
 
-        :param delta_g: difference of the two consecutive gradients
-        :type delta_g: numpy.array (n x 1)
-        """
-
-    @abstractmethod
-    def get_value_function(self):
-        """Obtain the vsalue of the function (for reporting) """
-        pass
-    
-    @abstractmethod
-    def number_of_function_evaluations(self):
-        """Obtain the total number of function evaluations """
-        pass
-    
-    @abstractmethod
-    def number_of_gradient_evaluations(self):
-        """Obtain the total number of gradient evaluations """
-        pass
-    
-    @abstractmethod
-    def number_of_hessian_evaluations(self):
-        """Obtain the total number of hessian evaluations """
-        pass
-    
-    @abstractmethod
-    def update(self, iterate, delta_x, delta_g):
-        """ Update the data necessary to calculate the direction.
+        :param function: the function to minimize
+        :type the_function: FunctionToMinimize
 
         """
-        pass
+        self.the_function = function
 
-    GIVE THE RESPONSIBILITY OF VERIFYING THE RELATIVE GRADIENT TO THE DIRECTION MANAGEMENT OBJECT, SO THAT IT IS THE ONLY ONBJECT THAT CALLS THE FUNCTION
-    
-class NewtonDirection(DirectionManagement):
-    """ Class for the generation of the Newton direction.
-    """
-    def __init(self, the_function):
-
-        self.the_function = the_function
-        self.number_function = 0
-        self.number_gradient = 0
-        self.number_hessian = 0
-        self.value_function = None
-        self.direction = None
-
-    def number_of_function_evaluations(self):
-        """Obtain the total number of function evaluations """
-        return self.number_function
-        
-    def number_of_gradient_evaluations(self):
-        """Obtain the total number of gradient evaluations """
-        return self.number_gradient
-    
-    def number_of_hessian_evaluations(self):
-        """Obtain the total number of hessian evaluations """
-        return self.number_hessian
-        
+    @abstractmethod
     def get_direction(self, iterate):
-        """ Update the data necessary to calculate the direction.
+        """Obtain a descent direction
+
+        :param iterate: current iterate
+        :type iterate: numpy.array (n x 1)
+
+        """
+
+
+class NewtonDirection(DirectionManagement):
+    """Class for the generation of the Newton direction."""
+
+    def get_direction(self, iterate):
+        """Update the data necessary to calculate the direction.
 
         :param iterate: current iterate
         :type iterate: numpy.array (n x 1)
@@ -97,31 +51,36 @@ class NewtonDirection(DirectionManagement):
 
         :param delta_g: difference of the two consecutive gradients
         :type delta_g: numpy.array (n x 1)
+
+        :return: descent direction, or None if the current iterate is optimal
+        :rtype: numpy.array (n x 1)
         """
         self.the_function.set_variables(iterate)
-        self.value_function, gradient, hessian = self.the_function.f_g_h()
-        self.number_function += 1
-        self.number_gradient += 1
-        self.number_hessian += 1
-        direction = schnabel_eskow_direction(gradient, hessian)
+        evaluation = self.the_function.f_g_h()
+        optimal = self.the_function.check_optimality()
+        if optimal:
+            return None
+        direction = schnabel_eskow_direction(evaluation.gradient, evaluation.hessian)
         return direction
-        
+
+
 class InverseBfgsDirection(DirectionManagement):
-    """ Class for the generation of the inverse BFGS direction.
-    """
-    def __init__(self, dimension, first_inverse_approximation=None):
+    """Class for the generation of the inverse BFGS direction."""
+
+    def __init__(self, function, first_inverse_approximation=None):
         """Constructor
 
         :param first_inverse_approximation: first inverse approximation of the Hessian
         :type first_inverse_approximation: numpy.array (n x n)
         """
-        
+        super().__init__(function)
+
         if first_inverse_approximation is None:
-            self.inverse_hessian = np.identity(dimension)
+            self.inverse_hessian_approx = np.identity(self.the_function.dimension())
         else:
-            if first_inverse_approximation.ndim != dimension:
+            if first_inverse_approximation.ndim != self.the_function.dimension():
                 error_msg = (
-                    f'Incompatible dimensions: {dimension} '
+                    f'Incompatible dimensions: {self.the_function.dimension()} '
                     f'and {first_inverse_approximation.ndim}'
                 )
                 raise OptimizationError(error_msg)
@@ -142,28 +101,29 @@ class InverseBfgsDirection(DirectionManagement):
         :type delta_g: numpy.array (n x 1)
         """
         self.the_function.set_variables(iterate)
-        self.value_function, gradient = self.the_function.f_g()
-        self.number_function += 1
-        self.number_gradient += 1
-        # The first time, there is nothinh to update
+        evaluation = self.the_function.f_g()
+        optimal = self.the_function.check_optimality()
+        if optimal:
+            return None
+        # The first time, there is nothing to update
         if self.last_iterate is not None:
             delta_x = iterate - self.last_iterate
-            delta_g = gradient - self.last_gradient
+            delta_g = evaluation.gradient - self.last_gradient
             # Update the approximation, if possible
             try:
                 self.inverse_hessian_approx = inverse_bfgs(
-                    self.inverse_hessian_approx,
-                    delta_x,
-                    delta_g)
+                    self.inverse_hessian_approx, delta_x, delta_g
+                )
             except OptimizationError as e:
                 logger.warning(e)
         self.last_iterate = iterate
-        self.last_gradient = gradient
-        
+        self.last_gradient = evaluation.gradient
+
         # Calculate and return the direction
-        direction = - self.inverse_hessian_approx @ gradient
+        direction = -self.inverse_hessian_approx @ evaluation.gradient
         return direction
-    
+
+
 def linesearch(
     fct, iterate, descent_direction, alpha0=1.0, beta1=1.0e-4, beta2=0.99, lbd=2.0
 ):
@@ -216,10 +176,8 @@ def linesearch(
         raise OptimizationError(error_msg)
 
     fct.set_variables(iterate)
-    function, gradient = fct.f_g()
-
-    nbr_function_evaluations = 1
-    deriv = np.inner(gradient, descent_direction)
+    evaluation = fct.f_g()
+    deriv = np.inner(evaluation.gradient, descent_direction)
 
     if deriv >= 0:
         raise OptimizationError(
@@ -232,54 +190,45 @@ def linesearch(
     for _ in range(MAX_ITERATIONS):
         candidate = iterate + alpha * descent_direction
         fct.set_variables(candidate)
-        value_candidate, gradient_candidate = fct.f_g()
-        nbr_function_evaluations += 1
+        candidate_evaluation = fct.f_g()
         # First Wolfe condition violated?
-        if value_candidate > function + alpha * beta1 * deriv:
+        if candidate_evaluation.function > evaluation.function + alpha * beta1 * deriv:
             alphar = alpha
             alpha = (alphal + alphar) / 2.0
-        elif np.inner(gradient_candidate, descent_direction) < beta2 * deriv:
+        # Second Wolfe condition violated?
+        elif np.inner(candidate_evaluation.gradient, descent_direction) < beta2 * deriv:
             alphal = alpha
             if alphar == np.inf:
                 alpha = lbd * alpha
             else:
                 alpha = (alphal + alphar) / 2.0
         else:
-            break
+            return alpha
     else:
         raise OptimizationError(
             f'Line search algorithm could not find a step verifying both Wolfe '
             f'conditions after {MAX_ITERATIONS} iterations.'
         )
-    return alpha, nbr_function_evaluations
+    return alpha
 
-def minimization_with_linesearch(
-    fct,
+
+def minimization_with_line_search(
+    the_function,
     starting_point,
-    descent_direction,
-    eps=np.finfo(np.float64).eps ** 0.3333,
+    direction_management,
     maxiter=1000,
 ):
-    """Minimization algorithm with inexact line search (Wolfe conditions)
+    """Minimization method with inexact line search (Wolfe conditions)
 
-    :param fct: object to calculate the objective function and its derivatives.
-    :type fct: optimization.functionToMinimize
+    :param the_function: function to minimize
+    :type the_function: FunctionToMinimize
 
     :param starting_point: starting point
-    :type starting_point: numpy.array (n x 1)
+    :type starting_point: numpy.array
 
-    :param starting_value: value of the objective function at the starting point
-    :type starting_value: float
-    
-    :param starting_gradient: gradient at the starting point
-    :type starting_point: numpy.array (n x 1)
-
-    :param descent_direction: object in charge of calculating the descent directions
-    :type descent_direction: DirectionManagement
-
-    :param eps: the algorithm stops when this precision is reached.
-                 Default: :math:`\\varepsilon^{\\frac{1}{3}}`
-    :type eps: float
+    :param direction_management: object in charge of providing the
+        descent directions and to check optimality
+    :type direction_management: DirectionManagement
 
     :param maxiter: the algorithm stops if this number of iterations
                     is reached. Default: 1000
@@ -294,76 +243,40 @@ def minimization_with_linesearch(
 
     :rtype: numpy.array, dict(str:object)
 
-    :raises OptimizationError: if the dimensions of the
-             matrix initBfgs do not match the length of starting_point.
+    :raises OptimizationError:
 
     """
-    n = len(starting_point)
     xk = starting_point
-    typx = np.ones(np.asarray(xk).shape)
-    typf = max(np.abs(f), 1.0)
-    relgrad = relative_gradient(xk, f, g, typx, typf)
-    if relgrad <= eps:
-        message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-        messages = {
-            'Algorithm': 'Inverse BFGS with line search',
-            'Relative gradient': relgrad,
-            'Cause of termination': message,
-            'Number of iterations': 0,
-            'Number of function evaluations': nfev,
-            'Number of gradient evaluations': ngev,
-        }
-        return xk, messages
-    nfev = 0
-    cont = True
+
     for k in range(maxiter):
-        d = -Hinv @ g
-        alpha, nfls = line_search(fct, xk, f, g, d)
-        nfev += nfls
-        delta = alpha * d
+        direction = direction_management.get_direction(xk)
+        if direction is None:
+            # The current iterate is optimal
+            messages = the_function.messages
+            messages['Number of iterations'] = k
+            break
+        evaluation = the_function.f_g()
+        alpha = linesearch(the_function, xk, direction)
+        delta = alpha * direction
         xk = xk + delta
-        gprev = g
-        fct.set_variables(xk)
-        f, g = fct.f_g()
-        nfev += 1
-        ngev += 1
-        Hinv = inverse_bfgs(Hinv, delta, g - gprev)
-        nfev += 1
-        relgrad = relative_gradient(xk, f, g, typx, typf)
-        if relgrad <= eps:
-            message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-            cont = False
-        if k == maxiter:
-            message = f'Maximum number of iterations reached: {maxiter}'
-            cont = False
-        #logger.debug(f'{k} f={f:10.7g} relgrad={relgrad:6.2g}' f' alpha={alpha:6.2g}')
-    messages = {
-        'Algorithm': 'Inverse BFGS with line search',
-        'Relative gradient': relgrad,
-        'Cause of termination': message,
-        'Number of iterations': k,
-        'Number of function evaluations': nfev,
-        'Number of gradient evaluations': ngev,
-    }
+    else:
+        messages = the_function.messages
+        messages[
+            'Cause of termination'
+        ] = f'Maximum number of iterations reached: {maxiter}'
 
     return xk, messages
 
 
-def newton_linesearch(
-    fct, starting_point, eps=np.finfo(np.float64).eps ** 0.3333, maxiter=100
-):
+def newton_linesearch(the_function, starting_point, maxiter=1000):
     """
     Newton method with inexact line search (Wolfe conditions)
 
-    :param fct: object to calculate the objective function and its derivatives.
-    :type fct: optimization.functionToMinimize
+    :param the_function: object to calculate the objective function and its derivatives.
+    :type the_function: optimization.functionToMinimize
 
     :param starting_point: starting point
     :type starting_point: numpy.array
-
-    :param eps: the algorithm stops when this precision is reached.
-                 Default: :math:`\\varepsilon^{\\frac{1}{3}}`
-    :type eps: float
 
     :param maxiter: the algorithm stops if this number of iterations
                     is reached. Defaut: 100
@@ -377,79 +290,32 @@ def newton_linesearch(
     :rtype: numpay.array, dict(str:object)
 
     """
+    messages = {'Algorithm': 'Unconstrained Newton with line search'}
+    newton_direction = NewtonDirection(the_function)
+    solution, algo_messages = minimization_with_line_search(
+        the_function, starting_point, newton_direction, maxiter
+    )
+    messages.update(algo_messages)
+    return solution, messages
 
-    xk = starting_point
-    fct.set_variables(xk)
-    f, g, h = fct.f_g_h()
-    nfev = 1
-    ngev = 1
-    nhev = 1
-    typx = np.ones_like(xk)
-    typf = max(np.abs(f), 1.0)
-    relgrad = relative_gradient(xk, f, g, typx, typf)
-    if relgrad <= eps:
-        message = f'Relative gradient = {relgrad:.3g} <= {eps:.2g}'
-        messages = {
-            'Algorithm': 'Unconstrained Newton with line search',
-            'Relative gradient': relgrad,
-            'Number of iterations': 0,
-            'Number of function evaluations': nfev,
-            'Number of gradient evaluations': ngev,
-            'Number of hessian evaluations': nhev,
-            'Cause of termination': message,
-        }
-        return xk, messages
 
-    for k in range(maxiter):
-        direction = schnabel_eskow_direction(g, h)
-        alpha, nfls = linesearch(fct, xk, direction)
-        nfev += nfls
-        ngev += nfls
-        xk += alpha * direction
-        fct.set_variables(xk)
-        f, g, h = fct.f_g_h()
-        nfev += 1
-        ngev += 1
-        nhev += 1
-        typf = max(np.abs(f), 1.0)
-        relgrad = relative_gradient(xk, f, g, typx, typf)
-        if relgrad <= eps:
-            message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-            break
-        logger.debug(f'{k+1} f={f:10.7g} relgrad={relgrad:6.2g}' f' alpha={alpha:6.2g}')
-    else:
-        message = f'Maximum number of iterations reached: {maxiter}'
-
-    messages = {
-        'Algorithm': 'Unconstrained Newton with line search',
-        'Relative gradient': relgrad,
-        'Number of iterations': k + 1,
-        'Number of function evaluations': nfev,
-        'Number of gradient evaluations': ngev,
-        'Number of hessian evaluations': nhev,
-        'Cause of termination': message,
-    }
-
-    return xk, messages
-
-def bfgs_line_search(
-    fct,
+def bfgs_linesearch(
+    the_function,
     starting_point,
     init_bfgs=None,
-    eps=np.finfo(np.float64).eps ** 0.3333,
     maxiter=1000,
 ):
     """BFGS method with inexact line search (Wolfe conditions)
 
-    :param fct: object to calculate the objective function and its derivatives.
-    :type fct: optimization.functionToMinimize
+    :param the_function: object to calculate the objective function and its derivatives.
+    :type the_function: optimization.functionToMinimize
 
     :param starting_point: starting point
     :type starting_point: numpy.array
 
-    :param initBfgs: matrix used to initialize BFGS. If None, the
+    :param init_bfgs: matrix used to initialize BFGS. If None, the
                      identity matrix is used. Default: None.
-    :type initBfgs: numpy.array
+    :type init_bfgs: numpy.array
 
     :param eps: the algorithm stops when this precision is reached.
                  Default: :math:`\\varepsilon^{\\frac{1}{3}}`
@@ -468,72 +334,13 @@ def bfgs_line_search(
 
     :rtype: numpy.array, dict(str:object)
 
-    :raises biogeme.exceptions.BiogemeError: if the dimensions of the
-             matrix initBfgs do not match the length of starting_point.
-
     """
-
-    n = len(starting_point)
-    xk = starting_point
-    fct.setVariables(xk)
-    f, g = fct.f_g()
-    nfev = 1
-    ngev = 1
-    if init_bfgs is None:
-        Hinv = np.identity(n)
-    else:
-        if init_bfgs.shape != (n, n):
-            errorMsg = (
-                f'BFGS must be initialized with a {n}x{n} '
-                f'matrix and not a {init_bfgs.shape[0]}'
-                'x{initBfgs.shape[1]} matrix.'
-            )
-            raise OptimizationError(errorMsg)
-        Hinv = init_bfgs
-    typx = np.ones(np.asarray(xk).shape)
-    typf = max(np.abs(f), 1.0)
-    relgrad = relative_gradient(xk, f, g, typx, typf)
-    if relgrad <= eps:
-        message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-        messages = {
-            'Algorithm': 'Inverse BFGS with line search',
-            'Relative gradient': relgrad,
-            'Cause of termination': message,
-            'Number of iterations': 0,
-            'Number of function evaluations': nfev,
-            'Number of gradient evaluations': ngev,
-        }
-        return xk, messages
-    nfev = 0
-    cont = True
-    for k in range(maxiter):
-        d = -Hinv @ g
-        alpha, nfls = line_search(fct, xk, f, g, d)
-        nfev += nfls
-        delta = alpha * d
-        xk = xk + delta
-        gprev = g
-        fct.set_variables(xk)
-        f, g = fct.f_g()
-        nfev += 1
-        ngev += 1
-        Hinv = inverse_bfgs(Hinv, delta, g - gprev)
-        nfev += 1
-        relgrad = relative_gradient(xk, f, g, typx, typf)
-        if relgrad <= eps:
-            message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-            cont = False
-        if k == maxiter:
-            message = f'Maximum number of iterations reached: {maxiter}'
-            cont = False
-        #logger.debug(f'{k} f={f:10.7g} relgrad={relgrad:6.2g}' f' alpha={alpha:6.2g}')
-    messages = {
-        'Algorithm': 'Inverse BFGS with line search',
-        'Relative gradient': relgrad,
-        'Cause of termination': message,
-        'Number of iterations': k,
-        'Number of function evaluations': nfev,
-        'Number of gradient evaluations': ngev,
-    }
-
-    return xk, messages
+    messages = {'Algorithm': 'Inverse BFGS with line search'}
+    bfgs_direction = InverseBfgsDirection(
+        function=the_function, first_inverse_approximation=init_bfgs
+    )
+    solution, algo_messages = minimization_with_line_search(
+        the_function, starting_point, bfgs_direction, maxiter
+    )
+    messages.update(algo_messages)
+    return solution, messages

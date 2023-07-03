@@ -6,13 +6,18 @@
 Class in charge of the management of bound constraints
 """
 import logging
+from typing import Iterable
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
+from biogeme_optimization.diagnostics import ConjugateGradientDiagnostic
 
 logger = logging.getLogger(__name__)
 
 
-def inner_product_subspace(vector_a, vector_b, subspace_indices):
+def inner_product_subspace(
+    vector_a: np.ndarray, vector_b: np.ndarray, subspace_indices: Iterable
+) -> float:
+
     """Given two input vectors `vector_a` and `vector_b`, this
     function calculates the inner product of the entries in `vector_a`
     and `vector_b` that correspond to the provided `subspace_indices`.
@@ -44,7 +49,9 @@ def inner_product_subspace(vector_a, vector_b, subspace_indices):
     return inner_product
 
 
-def matrix_vector_mult_subspace(matrix, vector, subspace_indices):
+def matrix_vector_mult_subspace(
+    matrix: np.ndarray, vector: np.ndarray, subspace_indices: Iterable
+) -> np.ndarray:
     """Performs matrix-vector multiplication involving selected entries of the vector.
 
     Given a square matrix and a vector, this function calculates the multiplication
@@ -141,16 +148,20 @@ class Bounds:
             return value
 
         self.bounds = bounds
-        """list of tuples (ell,u) containing the lower and upper bounds for
-        each free parameter.
+        """list of tuples (ell, u) containing the lower and upper bounds for
+            each free parameter.
         """
 
         self.dimension = len(bounds)  #: number of optimization variables
 
-        self.lower_bounds = [none_to_minus_infinity(bound[0]) for bound in bounds]
+        self.lower_bounds = np.array(
+            [none_to_minus_infinity(bound[0]) for bound in bounds]
+        )
         """ List of lower bounds """
 
-        self.upper_bounds = [none_to_plus_infinity(bound[1]) for bound in bounds]
+        self.upper_bounds = np.array(
+            [none_to_plus_infinity(bound[1]) for bound in bounds]
+        )
         """ List of upper bounds """
 
         wrong_bounds = np.array(
@@ -167,6 +178,24 @@ class Bounds:
                 f'{[bounds[i] for i in np.nonzero(wrong_bounds)[0]]}'
             )
             raise OptimizationError(error_msg)
+
+    @classmethod
+    def from_bounds(cls, lower, upper):
+        """Ctor using two vectors of bounds
+
+        :param lower: vector of lower bounds
+        :type lower: numpy.array
+
+        :param upper: vector of upper bounds
+        :type upper: numpy.array
+
+        """
+        if len(lower) != len(upper):
+            error_msg = f'Inconsistent length of arrays: {len(lower)} and {len(upper)}'
+            raise OptimizationError(error_msg)
+
+        list_of_tuples = list(zip(lower, upper))
+        return cls(list_of_tuples)
 
     def __str__(self):
         """Magic string."""
@@ -193,7 +222,7 @@ class Bounds:
                 f'Incompatible size: {len(point)}' f' and {self.dimension}'
             )
 
-        new_point = list(
+        new_point = np.array(
             point
         )  # Create a copy of point to avoid modifying the original list in place
         for i in range(self.dimension):
@@ -236,28 +265,59 @@ class Bounds:
         result = Bounds(new_bounds)
         return result
 
-    def intersection_with_trust_region(self, point, delta):
+    def intersection_with_trust_region(self, point, radius):
         """Create a Bounds object representing the intersection
-        between the feasible domain and the trust region.
+            between the bounds and the trust region:
+             point-radius <= x <= point+radius
+            and
+             ell <= x <= u
 
         :param point: center of the trust region
         :type point: numpy.array
 
-        :param delta: radius of the tust region (infinity norm)
-        :type delta: float
+        :param radius: radius of the trust region (infinity norm)
+        :type radius: float
+
+        :return: intersection between the feasible region and the trust region
+        :rtype: class Bounds
+
+        :raises OptimizationError: if the dimensions are inconsistent
+
+        """
+        trust_region = Bounds.from_bounds(point - radius, point + radius)
+        return self.intersect(trust_region)
+
+    def get_bounds_for_trust_region_subproblem(self, point, radius):
+        """Create a Bounds object representing the bounds on the step
+            for the trust region subproblem. It is the intersection between:
+              -radius <= d <= radius
+            and
+              ell-point <= d <= u-point
+
+        :param point: center of the trust region
+        :type point: numpy.array
+
+        :param radius: radius of the tust region (infinity norm)
+        :type radius: float
 
         :return: intersection between the feasible region and the trus region
         :rtype: class Bounds
 
         :raises OptimizationError: if the dimensions are inconsistent
+
         """
         if len(point) != self.dimension:
             raise OptimizationError(
                 f'Incompatible size: {len(point)}' f' and {self.dimension}'
             )
-
-        trust_region = Bounds([(xk - delta, xk + delta) for xk in point])
-        return self.intersect(trust_region)
+        trust_region = Bounds.from_bounds(
+            np.full(self.dimension, -radius),
+            np.full(self.dimension, radius),
+        )
+        shifted_bounds = Bounds.from_bounds(
+            self.lower_bounds - point, self.upper_bounds - point
+        )
+        return shifted_bounds.intersect(trust_region)
 
     def subspace(self, selected_variables):
         """Generate a Bounds object for selected variables
@@ -295,9 +355,9 @@ class Bounds:
 
         :raises OptimizationError: if the dimensions are inconsistent
         """
-        if len(point) != self.dimension:
+        if point.size != self.dimension:
             raise OptimizationError(
-                f'Incompatible size: ' f'{len(point)} and {self.dimension}'
+                f'Incompatible size: ' f'point:{point.size} and {self.dimension}'
             )
         for i in range(self.dimension):
             if (
@@ -335,6 +395,44 @@ class Bounds:
 
         def calculate_alpha(point_element, lower, upper, direction_element):
             """Calculate the value of alpha on numpy arrays"""
+            result = np.empty_like(point_element, dtype=float)
+
+            upper_bound_exists = upper != np.inf
+            lower_bound_exists = lower != -np.inf
+            strictly_positive_entries = direction_element > np.finfo(float).eps
+            strictly_negative_entries = direction_element < -np.finfo(float).eps
+
+            # If the upper bound exist and the direction is positive,
+            # we calculate the distance to the bound
+            mask1 = upper_bound_exists & strictly_positive_entries
+            result[mask1] = (upper[mask1] - point_element[mask1]) / direction_element[
+                mask1
+            ]
+
+            # If there is no upper bound, and the direction is
+            # positive, the step is infinite.
+            mask2 = ~upper_bound_exists & strictly_positive_entries
+            result[mask2] = np.inf
+
+            # If the lower bound exist, and the direction is negative,
+            # we calculate the distance to the bound.
+            mask3 = lower_bound_exists & strictly_negative_entries
+            result[mask3] = (lower[mask3] - point_element[mask3]) / direction_element[
+                mask3
+            ]
+
+            # If the lower bound does not exist, and the direction is
+            # negative, the step is infinite.
+            mask4 = ~lower_bound_exists & strictly_negative_entries
+            result[mask4] = np.inf
+
+            # If the direction is zero, or very close to zero, the
+            # step is infinite
+            mask5 = ~strictly_positive_entries & ~strictly_negative_entries
+            result[mask5] = np.inf
+
+            return result
+            """
             result = np.where(
                 direction_element > np.finfo(float).eps,
                 np.where(
@@ -353,6 +451,7 @@ class Bounds:
                 ),
             )
             return result
+            """
 
         alpha = calculate_alpha(point, self.lower_bounds, self.upper_bounds, direction)
         the_minimum = np.amin(alpha)
@@ -561,6 +660,8 @@ class Bounds:
                inconsistent
         :raises biogeme.exceptions.OptimizationError: if xk is infeasible
         """
+        if not isinstance(x_current, np.ndarray):
+            raise OptimizationError(f'Not an array {x_current}: {type(x_current)}')
 
         if len(x_current) != self.dimension:
             raise OptimizationError(
@@ -581,55 +682,227 @@ class Bounds:
                 '[LB: {self.lower_bounds} UB: {self.upper_bounds}]'
             )
 
-        J = self.active_constraints(x_current)
         x = x_current
         g = g_current - h_current @ x_current
         direction = self.projected_direction(x_current, -g_current)
 
         fprime = np.inner(g_current, direction)
-
         if fprime >= 0:
             if self.dimension <= 10:
                 logger.warning(
-                    f'GCP: direction {direction} is not a descent ' f'direction at {x}.'
+                    f'GCP: direction {direction} is not a descent direction at {x}.'
                 )
             else:
                 logger.warning('GCP: not a descent direction.')
 
         fsecond = np.inner(direction, h_current @ direction)
 
+        J = set()
+
         while len(J) < self.dimension:
-            delta_t, ind = self.maximum_step(x, direction)
-            # J is the set of inactive variables, and variable ind becomes active.
+            # Calculate the maximum step that can be done in the current direction
+            delta_t, _ = self.maximum_step(x, direction)
 
             # Test whether the GCP has been found
             ratio = -fprime / fsecond
+
             if fsecond > 0 and 0 < ratio < delta_t:
                 x = x + ratio * direction
                 return x
-
-            x_plus = x + delta_t * direction
-
-            # Note that there may be more than one variable activated
-            # at x_plus. Therefore, we recalculate the activity
-            # status.
-            J = self.active_constraints(x_plus)
-
-            # Update line derivatives
-            b = matrix_vector_mult_subspace(h_current, direction, J)
 
             # In theory, x + delta_t * direction must be feasible. However,
             # there may be some numerical problem. Therefore, we
             # project it on the feasible domain to make sure to obtain
             # a feasible point.
-            x = self.project(x + delta_t * direction)
+            x_plus = self.project(x + delta_t * direction)
 
-            d_dot_g = inner_product_subspace(direction, g, J)
+            # Note that there may be more than one variable activated
+            # at x_plus. Therefore, we recalculate the activity
+            # status.
+            J_plus = self.active_constraints(x_plus)
+            activated = J_plus - J
+
+            x = x_plus
+            J = J_plus
+
+            # Update line derivatives
+            bd = np.zeros_like(direction)
+            bd[list(activated)] = direction[list(activated)]
+            b = h_current @ bd
+
+            d_dot_g = np.sum([direction[i] * g[i] for i in activated])
             fprime += delta_t * fsecond - np.inner(b, x) - d_dot_g
-            fsecond += np.inner(b, b[list(J)] - 2 * direction)
-            direction[ind] = 0.0
+            fsecond += np.inner(b, bd - 2 * direction)
+            direction[list(activated)] = 0.0
 
             if fprime >= 0:
                 return x
 
         return x
+
+    def truncated_conjugate_gradient(self, gradient, hessian, tol=1.0e-6):
+        """Find an approximation of the trust region subproblem using
+            the truncated conjugate gradient method, where the step d
+            mus verify the bound constraints.
+
+        :param gradient: gradient of the quadratic model.
+        :type gradient: numpy.array
+
+        :param hessian: hessian of the quadratic model.
+        :type hessian: numpy.array
+
+        :param tol: tolerance on the norm of the gradient, used as a stopping criterion
+        :type tol: float
+
+        :return: d, diagnostic, where
+
+              - d is the approximate solution of the trust region subproblem,
+              - diagnostic is the nature of the solution:
+
+                * CONVERGENCE for convergence,
+                * OUT_OF_TRUST_REGION if out of the trust region,
+                * NEGATIVE_CURVATURE if negative curvature detected.
+                * NUMERICAL_PROBLEM if a numerical problem has been encountered
+
+        :rtype: numpy.array, ConjugateGradientDiagnostic
+
+        """
+        dimension = gradient.size
+        if hessian.shape[0] != dimension:
+            error_msg = f'Incompatible sizes: hessian:{hessian.shape[0]} and gradient:{dimension}'
+            raise OptimizationError(error_msg)
+
+        if hessian.shape[0] != hessian.shape[1]:
+            error_msg = (
+                f'Matrix must be square and not {hessian.shape[0]} x {hessian.shape[1]}'
+            )
+            raise OptimizationError(error_msg)
+
+        xk = np.zeros(dimension)
+        hx_plus_g = gradient
+        dk = -gradient
+        for _ in range(dimension):
+            try:
+                if np.linalg.norm(hx_plus_g) <= tol:
+                    diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+                    step = xk
+                    return step, diagnostic
+
+                curv = np.inner(dk, hessian @ dk)
+                if curv <= 0:
+                    # Negative curvature has been detected
+                    diagnostic = ConjugateGradientDiagnostic.NEGATIVE_CURVATURE
+                    step, _ = self.maximum_step(xk, dk)
+                    solution = xk + step * dk
+                    return solution, diagnostic
+                alphak = -np.inner(dk, hx_plus_g) / curv
+                xkp1 = xk + alphak * dk
+                if np.isnan(xkp1).any() or not self.feasible(xkp1):
+                    # Out of the trust region
+                    diagnostic = ConjugateGradientDiagnostic.OUT_OF_TRUST_REGION
+                    step, _ = self.maximum_step(xk, dk)
+                    solution = xk + step * dk
+                    return solution, diagnostic
+                xk = xkp1
+                next_hx_plus_g = hessian @ xk + gradient
+                betak = np.inner(next_hx_plus_g, next_hx_plus_g) / np.inner(
+                    hx_plus_g, hx_plus_g
+                )
+                dk = -next_hx_plus_g + betak * dk
+                hx_plus_g = next_hx_plus_g
+            except ValueError:
+                # Numerical problem. We follow the last direction
+                # until the border of the trust region
+                diagnostic = ConjugateGradientDiagnostic.NUMERICAL_PROBLEM
+                step, _ = self.maximum_step(xk, dk)
+                solution = xk + step * dk
+                return solution, diagnostic
+        # In theory, after n iterations, the algorithm has converged
+        diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        step = xk
+        return step, diagnostic
+
+    def truncated_conjugate_gradient_subspace(
+        self,
+        iterate,
+        gradient,
+        hessian,
+        radius,
+        tol=np.finfo(np.float64).eps ** 0.3333,
+    ):
+        """Find an approximation of the solution of the trust region
+        subproblem using the truncated conjugate gradient method within
+        the subspace of free variables. Free variables are those
+        corresponding to inactive constraints at the generalized Cauchy
+        point.
+
+        :param iterate: current iterate.
+        :type iterate: numpy.array
+
+        :param gradient: gradient of the quadratic model.
+        :type gradient: numpy.array
+
+        :param hessian: hessian of the quadrartic model.
+        :type hessian: numpy.array
+
+        :param radius: radius of the trust region.
+        :type radius: float
+
+        :param tol: tolerance used for stopping criterion.
+        :type tol: float
+
+        :return: d, diagnostic, where
+
+              - d is the approximate solution of the trust region subproblem,
+              - diagnostic is the nature of the solution:
+
+                * CONVERGENCE for convergence,
+                * OUT_OF_TRUST_REGION if out of the trust region,
+                * NEGATIVE_CURVATURE if negative curvature detected.
+                * NUMERICAL_PROBLEM if a numerical problem has been encountered
+
+        :rtype: numpy.array, ConjugateGradientDiagnostic
+
+        :raises OptimizationError: if the dimensions are inconsistent
+
+        """
+        if (
+            np.isnan(iterate).any()
+            or np.isnan(gradient).any()
+            or np.isnan(hessian).any()
+        ):
+            raise OptimizationError(
+                'Invalid input: iterate, gradient, or hessian contains NaN values.'
+            )
+
+        # First, we calculate the intersection between the trust region on
+        # the bounds. The trust region is also a bound constraint (based
+        # on infinity norm) of radius 'radius', centered at iterate.
+        intersection = self.intersection_with_trust_region(iterate, radius)
+
+        # Then, we calculate the generalized Cauchy point
+        gcp = intersection.generalized_cauchy_point(iterate, gradient, hessian)
+
+        bounds_trust_region_subproblem = self.get_bounds_for_trust_region_subproblem(
+            iterate, radius
+        )
+
+        # We fix the variables active at the GCP
+        activity_status = intersection.activity(gcp)
+        free_variables = activity_status == 0
+        fixed_variables = activity_status != 0
+
+        if not free_variables.any():
+            return gcp, ConjugateGradientDiagnostic.CONVERGENCE
+
+        bounds_subspace = bounds_trust_region_subproblem.subspace(free_variables)
+        gradient_subspace = gradient[free_variables]
+        hessian_subspace = hessian[free_variables][:, free_variables]
+
+        candidate, diagnostic = bounds_subspace.truncated_conjugate_gradient(
+            gradient_subspace, hessian_subspace, tol
+        )
+
+        solution = gcp
+        solution[free_variables] = iterate[free_variables] + candidate
+        return solution, diagnostic

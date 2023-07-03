@@ -6,34 +6,112 @@
 Functions for trust region algorithms
 """
 import logging
-from enum import Enum, auto
+from abc import ABC, abstractmethod
 import numpy as np
-import scipy.linalg as la
+from biogeme_optimization.diagnostics import (
+    DoglegDiagnostic,
+    ConjugateGradientDiagnostic,
+)
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.function import relative_gradient
 from biogeme_optimization.algebra import schnabel_eskow_direction
+from biogeme_optimization.bfgs import bfgs
 
 logger = logging.getLogger(__name__)
 
 
-class DoglegDiagnostic(Enum):
-    """Possible aoutcomes of the dogleg method"""
+class QuadraticModel(ABC):
+    """Abstract class for the generation of the quadratic model."""
 
-    NEGATIVE_CURVATURE = auto()
-    CAUCHY = auto()
-    PARTIAL_CAUCHY = auto()
-    NEWTON = auto()
-    PARTIAL_NEWTON = auto()
-    DOGLEG = auto()
+    def __init__(self, function):
+        """Constructor
+
+        :param function: the function to minimize
+        :type the_function: FunctionToMinimize
+
+        """
+        self.the_function = function
+
+    @abstractmethod
+    def get_f_g_h(self, iterate):
+        """Obtain the vector g and the matrix h characterizing the
+            model, as well as the value of the function
+
+        :param iterate: current iterate
+        :type iterate: numpy.array (n x 1)
+
+        :return: function, gradient and hessian
+        :rtype: tuple(float, numpy.array (nx1), numpy.array (nxn)
+        """
 
 
-class ConjugateGradientDiagnostic(Enum):
-    """Possible aoutcomes of the dogleg method"""
+class NewtonModel(QuadraticModel):
+    def get_f_g_h(self, iterate):
+        """Obtain the vector g and the matrix h characterizing the model
 
-    CONVERGENCE = auto()
-    OUT_OF_TRUST_REGION = auto()
-    NEGATIVE_CURVATURE = auto()
-    NUMERICAL_PROBLEM = auto()
+        :param iterate: current iterate
+        :type iterate: numpy.array (n x 1)
+
+        :return: function, gradient and hessian
+        :rtype: tuple(float, numpy.array (nx1), numpy.array (nxn)
+        """
+        self.the_function.set_variables(iterate)
+        evaluation = self.the_function.f_g_h()
+        optimal = self.the_function.check_optimality()
+        if optimal:
+            return None, None, None
+        return evaluation.function, evaluation.gradient, evaluation.hessian
+
+
+class BfgsModel(QuadraticModel):
+    def __init__(self, function, first_approximation=None):
+        """Constructor
+
+        :param first_approximation: first approximation of the Hessian
+        :type first_approximation: numpy.array (n x n)
+
+        :return: function, gradient and hessian
+        :rtype: tuple(float, numpy.array (nx1), numpy.array (nxn)
+        """
+        super().__init__(function)
+
+        if first_approximation is None:
+            self.hessian_approx = np.identity(self.the_function.dimension())
+        else:
+            if first_approximation.ndim != self.the_function.dimension():
+                error_msg = (
+                    f'Incompatible dimensions: {self.the_function.dimension()} '
+                    f'and {first_approximation.ndim}'
+                )
+                raise OptimizationError(error_msg)
+            self.hessian_approx = first_approximation
+        self.last_iterate = None
+        self.last_gradient = None
+
+    def get_f_g_h(self, iterate):
+        """Obtain the vector g and the matrix h characterizing the model
+
+        :param iterate: current iterate
+        :type iterate: numpy.array (n x 1)
+
+        """
+        self.the_function.set_variables(iterate)
+        evaluation = self.the_function.f_g()
+        optimal = self.the_function.check_optimality()
+        if optimal:
+            return None, None, None
+        # The first time, there is nothing to update
+        if self.last_iterate is not None:
+            delta_x = iterate - self.last_iterate
+            delta_g = evaluation.gradient - self.last_gradient
+            # Update the approximation, if possible
+            try:
+                self.hessian_approx = bfgs(self.hessian_approx, delta_x, delta_g)
+            except OptimizationError as e:
+                logger.warning(e)
+        self.last_iterate = iterate
+        self.last_gradient = evaluation.gradient
+        return evaluation.function, evaluation.gradient, self.hessian_approx
 
 
 def trust_region_intersection(
@@ -179,7 +257,7 @@ def dogleg(gradient, hessian, radius):
 
     # Check if the model is convex along the gradient direction
     if cauchy_dir is None:
-        dstar = -radius * gradient / la.norm(gradient)
+        dstar = -radius * gradient / np.linalg.norm(gradient)
         return dstar, DoglegDiagnostic.NEGATIVE_CURVATURE
 
     alpha = np.inner(gradient, gradient)
@@ -199,7 +277,7 @@ def dogleg(gradient, hessian, radius):
         return cauchy_dir, DoglegDiagnostic.CAUCHY
 
     # Compute Newton point
-    normdn = la.norm(newton_dir)
+    normdn = np.linalg.norm(newton_dir)
 
     if normdn <= radius:
         # Newton point is inside the trust region
@@ -230,7 +308,7 @@ def truncated_conjugate_gradient(gradient, hessian, radius, tol=1.0e-6):
     :param gradient: gradient of the quadratic model.
     :type gradient: numpy.array
 
-    :param hessian: hessian of the quadrartic model.
+    :param hessian: hessian of the quadratic model.
     :type hessian: numpy.array
 
     :param radius: radius of the trust region.
@@ -267,7 +345,7 @@ def truncated_conjugate_gradient(gradient, hessian, radius, tol=1.0e-6):
                 return solution, diagnostic
             alphak = -np.inner(dk, gk) / curv
             xkp1 = xk + alphak * dk
-            if np.isnan(xkp1).any() or la.norm(xkp1) > radius:
+            if np.isnan(xkp1).any() or np.linalg.norm(xkp1) > radius:
                 # Out of the trust region
                 diagnostic = ConjugateGradientDiagnostic.OUT_OF_TRUST_REGION
                 step = trust_region_intersection(xk, dk, radius, check_step=False)
@@ -278,7 +356,7 @@ def truncated_conjugate_gradient(gradient, hessian, radius, tol=1.0e-6):
             betak = np.inner(gkp1, gkp1) / np.inner(gk, gk)
             dk = -gkp1 + betak * dk
             gk = gkp1
-            if la.norm(gkp1) <= tol:
+            if np.linalg.norm(gkp1) <= tol:
                 diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
                 step = xk
                 return step, diagnostic
@@ -293,40 +371,37 @@ def truncated_conjugate_gradient(gradient, hessian, radius, tol=1.0e-6):
     return step, diagnostic
 
 
-def newton_trust_region(
-    fct,
+def minimization_with_trust_region(
+    the_function,
     starting_point,
-    delta0=1.0,
-    eps=np.finfo(np.float64).eps ** 0.3333,
-    use_dogleg=False,
+    quadratic_model,
+    solving_trust_region_subproblem,
     maxiter=1000,
+    initial_radius=1.0,
     eta1=0.01,
     eta2=0.9,
 ):
-    """Newton method with trust region
+    """Minimization method with trust region
 
-    :param fct: object to calculate the objective function and its derivatives.
-    :type fct: optimization.functionToMinimize
+    :param the_function: object to calculate the objective function and its derivatives.
+    :type the_function: optimization.functionToMinimize
 
     :param starting_point: starting point
     :type starting_point: numpy.array
 
-    :param delta0: initial radius of the trust region. Default: 100.
-    :type delta0: float
+    :param quadratic_model: object in charge of generating the quadratic model
+    :type quadratic_model: QuadraticModel
 
-    :param eps: the algorithm stops when this precision is reached.
-              Default: :math:`\\varepsilon^{\\frac{1}{3}}`
-    :type eps: float
-
-    :param use_dogleg: If True, the Dogleg method is used to solve the
-       trut region subproblem. If False, the truncated conjugate
-       gradient is used. Default: False.
-    :type use_dogleg: bool
+    :param solving_trust_region_subproblem: function in charge of
+        solving the trust region subproblem
+    :type solving_trust_region_subproblem: step, diagnostic = fct(g, h, radius)
 
     :param maxiter: the algorithm stops if this number of iterations
                     is reached. Default: 1000.
-
     :type maxiter: int
+
+    :param inital_radius: initial radius of the trust region. Default: 100.
+    :type initial_radius: float
 
     :param eta1: threshold for failed iterations. Default: 0.01.
     :type eta1: float
@@ -337,6 +412,176 @@ def newton_trust_region(
     :return: tuple x, messages, where
 
             - x is the solution found,
+
+            - messages is a dictionary reporting various aspects
+              related to the run of the algorithm.
+
+    :rtype: numpy.array, dict(str:object)
+
+    """
+    xk = starting_point
+    radius = initial_radius
+    max_delta = np.finfo(float).max
+    min_delta = np.finfo(float).eps
+    rho = 0.0
+    for k in range(maxiter):
+        value_iterate, g, h = quadratic_model.get_f_g_h(xk)
+        if value_iterate is None:
+            messages = the_function.messages
+            messages['Number of iterations'] = k
+            break
+        step, _ = solving_trust_region_subproblem(g, h, radius)
+        candidate = xk + step
+        the_function.set_variables(candidate)
+        # Calculate the value of the function
+        value_candidate = the_function.f()
+        if value_candidate >= value_iterate:
+            radius = np.linalg.norm(step) / 2.0
+            status = '-'
+        else:
+            num = value_iterate - value_candidate
+            denom = -np.inner(step, g) - 0.5 * np.inner(step, h @ step)
+            rho = num / denom
+            if rho < eta1:
+                # Failure: reduce the trust region
+                radius = np.linalg.norm(step) / 2.0
+                status = '-'
+            else:
+                # Candidate accepted
+                xk = candidate
+                if rho >= eta2:
+                    # Enlarge the trust region
+                    radius = min(2 * radius, max_delta)
+                    status = '++'
+                else:
+                    status = '+'
+        if radius <= min_delta:
+            messages = the_function.messages
+            messages['Cause of termination'] = f'Trust region is too small: {radius}'
+            break
+    else:
+        messages = the_function.messages
+        messages[
+            'Cause of termination'
+        ] = f'Maximum number of iterations reached: {maxiter}'
+
+    return xk, messages
+
+
+def newton_trust_region(
+    the_function,
+    starting_point,
+    use_dogleg=False,
+    maxiter=1000,
+    initial_radius=1.0,
+    eta1=0.01,
+    eta2=0.9,
+):
+    """Newton method with trust region
+
+    :param the_function: object to calculate the objective function and its derivatives.
+    :type the_function: optimization.functionToMinimize
+
+    :param starting_point: starting point
+    :type starting_point: numpy.array
+
+    :param use_dogleg: True if the trust region subproblem is solved using
+        the dogleg method. False is it is solved with the truncated
+        conjugate gradient algorithm.
+    :type use_dogleg: bool
+
+    :param maxiter: the algorithm stops if this number of iterations
+                    is reached. Default: 1000.
+    :type maxiter: int
+
+    :param inital_radius: initial radius of the trust region. Default: 100.
+    :type initial_radius: float
+
+    :param eta1: threshold for failed iterations. Default: 0.01.
+    :type eta1: float
+
+    :param eta2: threshold for very successful iterations. Default 0.9.
+    :type eta2: float
+
+    :return: tuple x, messages, where
+
+            - x is the solution found,
+
+            - messages is a dictionary reporting various aspects
+              related to the run of the algorithm.
+
+    :rtype: numpy.array, dict(str:object)
+
+    """
+    the_model = NewtonModel(the_function)
+
+    if use_dogleg:
+        return minimization_with_trust_region(
+            the_function,
+            starting_point,
+            the_model,
+            dogleg,
+            maxiter,
+            initial_radius,
+            eta1,
+            eta2,
+        )
+    return minimization_with_trust_region(
+        the_function,
+        starting_point,
+        the_model,
+        truncated_conjugate_gradient,
+        maxiter,
+        initial_radius,
+        eta1,
+        eta2,
+    )
+
+
+def bfgs_trust_region(
+    the_function,
+    starting_point,
+    init_bfgs=None,
+    use_dogleg=False,
+    maxiter=1000,
+    initial_radius=1.0,
+    eta1=0.01,
+    eta2=0.9,
+):
+    """BFGS method with trust region
+
+    :param the_function: object to calculate the objective function and its derivatives.
+    :type the_function: optimization.functionToMinimize
+
+    :param starting_point: starting point
+    :type starting_point: numpy.array
+
+    :param init_bfgs: matrix used to initialize BFGS. If None, the
+                     identity matrix is used. Default: None.
+    :type init_bfgs: numpy.array
+
+    :param use_dogleg: True if the trust region subproblem is solved using
+        the dogleg method. False is it is solved with the truncated
+        conjugate gradient algorithm.
+    :type use_dogleg: bool
+
+    :param maxiter: the algorithm stops if this number of iterations
+                    is reached. Default: 1000.
+    :type maxiter: int
+
+    :param inital_radius: initial radius of the trust region. Default: 100.
+    :type initial_radius: float
+
+    :param eta1: threshold for failed iterations. Default: 0.01.
+    :type eta1: float
+
+    :param eta2: threshold for very successful iterations. Default 0.9.
+    :type eta2: float
+
+    :return: tuple x, messages, where
+
+            - x is the solution found,
+
             - messages is a dictionary reporting various aspects
               related to the run of the algorithm.
 
@@ -344,94 +589,26 @@ def newton_trust_region(
 
     """
 
-    current_iterate = starting_point
-    fct.set_variables(current_iterate)
-    value_function, gradient, hessian = fct.f_g_h()
-    nfev = 1
-    ngev = 1
-    nhev = 1
-    typx = np.ones(np.asarray(current_iterate).shape)
-    typf = max(np.abs(value_function), 1.0)
-    relgrad = relative_gradient(current_iterate, value_function, gradient, typx, typf)
-    if relgrad <= eps:
-        message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-        messages = {
-            'Algorithm': 'Unconstrained Newton with trust region',
-            'Relative gradient': relgrad,
-            'Cause of termination': message,
-            'Number of iterations': 0,
-            'Number of function evaluations': nfev,
-            'Number of gradient evaluations': ngev,
-            'Number of hessian evaluations': nhev,
-        }
-        return current_iterate, messages
-    delta = delta0
-    nfev = 0
-    max_delta = np.finfo(float).max
-    min_delta = np.finfo(float).eps
-    rho = 0.0
-    for k in range(maxiter):
-        if use_dogleg:
-            step, _ = dogleg(gradient, hessian, delta)
-        else:
-            step, _ = truncated_conjugate_gradient(gradient, hessian, delta)
-        candidate = current_iterate + step
-        fct.set_variables(candidate)
-        # Calculate the value of the function
-        value_function_candidate = fct.f()
-        nfev += 1
-        num = value_function - value_function_candidate
-        denom = -np.inner(step, gradient) - 0.5 * np.inner(step, hessian @ step)
-        rho = num / denom
-        if rho < eta1:
-            # Failure: reduce the trust region
-            delta = la.norm(step) / 2.0
-            status = '-'
-        else:
-            # Candidate accepted
-            (
-                value_function_candidate,
-                gradient_candidate,
-                hessian_candidate,
-            ) = fct.f_g_h()
-            nfev += 1
-            ngev += 1
-            nhev += 1
-            current_iterate = candidate
-            value_function = value_function_candidate
-            gradient = gradient_candidate
-            hessian = hessian_candidate
-            if rho >= eta2:
-                # Enlarge the trust region
-                delta = min(2 * delta, max_delta)
-                status = '++'
-            else:
-                status = '+'
-            relgrad = relative_gradient(
-                current_iterate, value_function, gradient, typx, typf
-            )
-            if relgrad <= eps:
-                message = f'Relative gradient = {relgrad:.2g} <= {eps:.2g}'
-                break
-        if delta <= min_delta:
-            message = f'Trust region is too small: {delta}'
-            break
-        logger.debug(
-            f'{k+1} f={value_function:10.7g} relgrad={relgrad:6.2g} '
-            f'delta={delta:6.2g} '
-            f'rho={rho:6.2g} {status}'
+    the_model = BfgsModel(the_function, init_bfgs)
+
+    if use_dogleg:
+        return minimization_with_trust_region(
+            the_function,
+            starting_point,
+            the_model,
+            dogleg,
+            maxiter,
+            initial_radius,
+            eta1,
+            eta2,
         )
-    else:
-        message = f'Maximum number of iterations reached: {maxiter}'
-
-    messages = {
-        'Algorithm': 'Unconstrained Newton with trust region',
-        'Relative gradient': relgrad,
-        'Cause of termination': message,
-        'Number of iterations': k + 1,
-        'Number of function evaluations': nfev,
-        'Number of gradient evaluations': ngev,
-        'Number of hessian evaluations': nhev,
-    }
-
-    return current_iterate, messages
+    return minimization_with_trust_region(
+        the_function,
+        starting_point,
+        the_model,
+        truncated_conjugate_gradient,
+        maxiter,
+        initial_radius,
+        eta1,
+        eta2,
+    )

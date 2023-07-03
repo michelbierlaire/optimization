@@ -16,199 +16,15 @@ from biogeme_optimization.trust_region import (
     cauchy_newton_dogleg,
     dogleg,
     truncated_conjugate_gradient,
+    newton_trust_region,
+    bfgs_trust_region,
     DoglegDiagnostic,
     ConjugateGradientDiagnostic,
-    newton_trust_region,
+    QuadraticModel,
+    NewtonModel,
+    BfgsModel,
 )
-from biogeme_optimization.function import FunctionToMinimize
-
-
-class my_function_to_minimize(FunctionToMinimize):
-    def __init__(self):
-        self.x = None
-
-    def set_variables(self, x):
-        """Set the values of the variables for which the function
-        has to be calculated.
-
-        :param x: values
-        :type x: numpy.array
-        """
-        self.x = x
-
-    def f(self, batch=None):
-        """Calculate the value of the function
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      thre random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function
-        :rtype: float
-        """
-        half_sum_of_squares = np.sum(np.square(self.x)) / 2
-        return half_sum_of_squares
-
-    def f_g(self, batch=None):
-        """Calculate the value of the function and the gradient
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      the random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function and the gradient
-        :rtype: tuple float, numpy.array
-        """
-        half_sum_of_squares = np.sum(np.square(self.x)) / 2
-        return half_sum_of_squares, self.x
-
-    def f_g_h(self, batch=None):
-        """Calculate the value of the function, the gradient and the Hessian
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      the random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function, the gradient and the Hessian
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        half_sum_of_squares = np.sum(np.square(self.x)) / 2
-        return half_sum_of_squares, self.x, np.eye(len(self.x))
-
-    def f_g_bhhh(self, batch=None):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      the random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function, the gradient and the BHHH
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        raise OptimizationError('BHHH is irrelevant in this context')
-
-
-class example_58(FunctionToMinimize):
-    """Implements Example 5.8, p. 121, Bierlaire (2015)"""
-
-    def __init__(self):
-        self.x = None
-
-    def set_variables(self, x):
-        """Set the values of the variables for which the function
-        has to be calculated.
-
-        :param x: values
-        :type x: numpy.array
-        """
-        self.x = x
-
-    def f(self, batch=None):
-        """Calculate the value of the function
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      thre random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function
-        :rtype: float
-        """
-        return 0.5 * self.x[0] ** 2 + self.x[0] * np.cos(self.x[1])
-
-    def f_g(self, batch=None):
-        """Calculate the value of the function and the gradient
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      the random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function and the gradient
-        :rtype: tuple float, numpy.array
-        """
-        f = self.f()
-        g = np.array([self.x[0] + np.cos(self.x[1]), -self.x[0] * np.sin(self.x[1])])
-        return f, g
-
-    def f_g_h(self, batch=None):
-        """Calculate the value of the function, the gradient and the Hessian
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      the random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function, the gradient and the Hessian
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        f, g = self.f_g()
-        h = np.array(
-            [
-                [1, -np.sin(self.x[1])],
-                [-np.sin(self.x[1]), -self.x[0] * np.cos(self.x[1])],
-            ]
-        )
-        return f, g, h
-
-    def f_g_bhhh(self, batch=None):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :param batch: for data driven functions (such as a log
-                      likelikood function), it is possible to
-                      approximate the value of the function using a
-                      sample of the data called a batch. This argument
-                      is a value between 0 and 1 representing the
-                      percentage of the data that should be used for
-                      the random batch. If None, the full data set is
-                      used. Default: None pass
-        :type batch: float
-
-        :return: value of the function, the gradient and the BHHH
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        raise OptimizationError('BHHH is irrelevant in this context')
+from examples import MyFunctionToMinimize, Example58, Rosenbrock
 
 
 class TrustRegionIntersectionTest(unittest.TestCase):
@@ -497,61 +313,244 @@ class TrustRegionIntersectionTest(unittest.TestCase):
         np.testing.assert_array_almost_equal(step, expected_step)
         self.assertEqual(diagnostic, expected_diagnostic)
 
-    def test_newton_trust_region_1(self):
-        starting_point = np.array([1, 1])
+
+class TestQuadraticModel(unittest.TestCase):
+    def test_f_g_h(self):
+        function = MyFunctionToMinimize(dimension=2)
+        with self.assertRaises(TypeError):
+            _ = QuadraticModel(function)
+
+
+class TestNewtonModel(unittest.TestCase):
+    def test_f_g_h(self):
+        function = MyFunctionToMinimize(dimension=2)
+        model = NewtonModel(function)
+        iterate = np.array([1, 1])
+        f, g, h = model.get_f_g_h(iterate)
+        expected_g = np.array([1, 1])
+        np.testing.assert_array_almost_equal(g, expected_g)
+
+        expected_h = np.array([[1.0, 0.0], [0.0, 1.0]])
+        np.testing.assert_array_almost_equal(h, expected_h)
+
+        optimal_solution = np.array([0, 0])
+        f, g, h = model.get_f_g_h(optimal_solution)
+        self.assertIsNone(g)
+        self.assertIsNone(h)
+
+
+class TestBfgsModel(unittest.TestCase):
+    def test_f_g_h(self):
+        function = MyFunctionToMinimize(dimension=2)
+        model = BfgsModel(function)
+        iterate = np.array([1, 1])
+        f, g, h = model.get_f_g_h(iterate)
+
+        expected_g = np.array([1, 1])
+        np.testing.assert_array_almost_equal(g, expected_g)
+
+        expected_h = np.array([[1.0, 0.0], [0.0, 1.0]])
+        np.testing.assert_array_almost_equal(h, expected_h)
+
+        optimal_solution = np.array([0, 0])
+        f, g, h = model.get_f_g_h(optimal_solution)
+        self.assertIsNone(g)
+        self.assertIsNone(h)
+
+
+class TestAlgorithms(unittest.TestCase):
+    def test_newton_trust_region(self):
+        fct = MyFunctionToMinimize(dimension=2)
+
+        # Set the starting point
+        starting_point = np.array([2.0, 2.0])
+
+        # Set the expected solution
+        expected_solution = np.array([0.0, 0.0])
+
+        # Call the newton_linesearch function
+        solution, messages = newton_trust_region(fct, starting_point, use_dogleg=True)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+        )
+
+        # Call the newton_linesearch function
+        solution, messages = newton_trust_region(fct, starting_point, use_dogleg=False)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+        )
+
+    def test_bfgs_trust_region(self):
+        fct = MyFunctionToMinimize(dimension=2)
+
+        # Set the starting point
+        starting_point = np.array([2.0, 2.0])
+
+        # Set the expected solution
+        expected_solution = np.array([0.0, 0.0])
+
+        # Call the newton_linesearch function
+        solution, messages = bfgs_trust_region(fct, starting_point, use_dogleg=True)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+        )
+
+        # Call the newton_linesearch function
+        solution, messages = bfgs_trust_region(fct, starting_point, use_dogleg=False)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+        )
+
+    def test_newton_trust_region_ex58(self):
+        fct = Example58()
+
+        # Set the starting point
+        starting_point = np.array([1.0, 1.0])
+
+        # Set the expected solution
+        expected_solution = np.array([-1.0, 0])
+
+        # Call the newton_linesearch function
+        solution, messages = newton_trust_region(fct, starting_point, use_dogleg=True)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 7.1e-07 <= 6.1e-06'
+        )
+
+        # Call the newton_linesearch function
+        solution, messages = newton_trust_region(fct, starting_point, use_dogleg=False)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 1.5e-09 <= 6.1e-06'
+        )
+
+    def test_bfgs_trust_region_ex58(self):
+        fct = Example58()
+
+        # Set the starting point
+        starting_point = np.array([1.0, 1.0])
+
+        # Set the expected solution
         expected_solution = np.array([-1, 0])
-        expected_messages = {
-            'Algorithm': 'Unconstrained Newton with trust region',
-            'Number of iterations': 5,
-            'Number of function evaluations': 10,
-            'Number of gradient evaluations': 6,
-            'Number of hessian evaluations': 6,
-        }
 
-        solution, messages = newton_trust_region(example_58(), starting_point)
-        np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
-        keys = expected_messages.keys()
-        for key in keys:
-            self.assertEqual(messages[key], expected_messages[key])
+        # Call the newton_linesearch function
+        solution, messages = bfgs_trust_region(fct, starting_point, use_dogleg=True)
 
-    def test_newton_trust_region_2(self):
-        starting_point = np.array([1, 1])
-        expected_solution = np.array([-1.07087603, -0.12558247])
-        expected_messages = {
-            'Algorithm': 'Unconstrained Newton with trust region',
-            'Cause of termination': 'Maximum number of iterations reached: 2',
-            'Number of iterations': 2,
-            'Number of function evaluations': 4,
-            'Number of gradient evaluations': 3,
-            'Number of hessian evaluations': 3,
-        }
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
 
-        solution, messages = newton_trust_region(
-            example_58(), starting_point, maxiter=2
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 2.4e-06 <= 6.1e-06'
         )
-        np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
-        keys = expected_messages.keys()
-        for key in keys:
-            self.assertEqual(messages[key], expected_messages[key])
 
-    def test_newton_trust_region_3(self):
-        starting_point = np.array([1, 1])
-        expected_solution = np.array([1, 1])
-        expected_messages = {
-            'Algorithm': 'Unconstrained Newton with trust region',
-            'Cause of termination': 'Trust region is too small: 2.220446049250313e-16',
-            'Number of iterations': 1,
-            'Number of function evaluations': 2,
-            'Number of gradient evaluations': 2,
-            'Number of hessian evaluations': 2,
-        }
-        solution, messages = newton_trust_region(
-            example_58(), starting_point, delta0=np.finfo(float).eps / 2
+        # Call the newton_linesearch function
+        solution, messages = bfgs_trust_region(fct, starting_point, use_dogleg=False)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 2.4e-06 <= 6.1e-06'
         )
-        np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
-        keys = expected_messages.keys()
-        for key in keys:
-            self.assertEqual(messages[key], expected_messages[key])
+
+    def test_newton_trust_region_rosenbrock(self):
+        fct = Rosenbrock()
+
+        # Set the starting point
+        starting_point = np.array([-1.5, 1.5])
+
+        # Set the expected solution
+        expected_solution = np.array([1.0, 1.0])
+
+        # Call the newton_linesearch function
+        solution, messages = newton_trust_region(fct, starting_point, use_dogleg=True)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 2.6e-06 <= 6.1e-06'
+        )
+
+        # Call the newton_linesearch function
+        solution, messages = newton_trust_region(fct, starting_point, use_dogleg=False)
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 9.8e-10 <= 6.1e-06'
+        )
+
+    def test_bfgs_trust_region_rosenbrock(self):
+        fct = Rosenbrock()
+
+        # Set the starting point
+        starting_point = np.array([-1.5, 1.5])
+
+        # Set the expected solution
+        expected_solution = np.array([1.0, 1.0])
+
+        # Call the newton_linesearch function
+        solution, messages = bfgs_trust_region(
+            fct, starting_point, use_dogleg=True, maxiter=20000
+        )
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 3.2e-08 <= 6.1e-06'
+        )
+
+        # Call the newton_linesearch function
+        solution, messages = bfgs_trust_region(
+            fct,
+            starting_point,
+            use_dogleg=False,
+            maxiter=20000,
+        )
+
+        # Check the solution
+        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+
+        # Check the termination message
+        self.assertEqual(
+            messages['Cause of termination'], 'Relative gradient = 3.2e-08 <= 6.1e-06'
+        )
 
 
 if __name__ == '__main__':

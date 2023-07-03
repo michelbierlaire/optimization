@@ -15,12 +15,24 @@ from biogeme_optimization.bounds import (
     inner_product_subspace,
     matrix_vector_mult_subspace,
 )
+from biogeme_optimization.diagnostics import ConjugateGradientDiagnostic
 
 
 class TestCode(unittest.TestCase):
     def setUp(self):
         the_bounds = [(1, 10), (2, 20), (3, 30)]
         self.bounds = Bounds(the_bounds)
+
+    def test_constructor(self):
+        same_bounds = Bounds.from_bounds(
+            self.bounds.lower_bounds, self.bounds.upper_bounds
+        )
+        np.testing.assert_array_equal(
+            self.bounds.lower_bounds, same_bounds.lower_bounds
+        )
+        np.testing.assert_array_equal(
+            self.bounds.upper_bounds, same_bounds.upper_bounds
+        )
 
     def test_inner_product_subspace(self):
         a = np.array([1, 2, 3, 4, 5])
@@ -99,33 +111,37 @@ class TestCode(unittest.TestCase):
 
     def test_project(self):
         example_input = [5, 15, 25]
-        expected_output = [
-            5,
-            15,
-            25,
-        ]  # Expected output when all values are within bounds
-        self.assertEqual(self.bounds.project(example_input), expected_output)
+        expected_output = np.array(
+            [
+                5,
+                15,
+                25,
+            ]
+        )  # Expected output when all values are within bounds
+        np.testing.assert_array_almost_equal(
+            self.bounds.project(example_input), expected_output
+        )
 
     def test_lower_out_of_bounds(self):
         input_with_lower_out_of_bounds = [0, 15, 25]
-        expected_output_with_lower_out_of_bounds = [1, 15, 25]
-        self.assertEqual(
+        expected_output_with_lower_out_of_bounds = np.array([1, 15, 25])
+        np.testing.assert_array_almost_equal(
             self.bounds.project(input_with_lower_out_of_bounds),
             expected_output_with_lower_out_of_bounds,
         )
 
     def test_upper_out_of_bounds(self):
         input_with_upper_out_of_bounds = [5, 25, 40]
-        expected_output_with_upper_out_of_bounds = [5, 20, 30]
-        self.assertEqual(
+        expected_output_with_upper_out_of_bounds = np.array([5, 20, 30])
+        np.testing.assert_array_almost_equal(
             self.bounds.project(input_with_upper_out_of_bounds),
             expected_output_with_upper_out_of_bounds,
         )
 
     def test_both_out_of_bounds(self):
         input_with_both_bounds_out_of_bounds = [0, 25, 40]
-        expected_output_with_both_bounds_out_of_bounds = [1, 20, 30]
-        self.assertEqual(
+        expected_output_with_both_bounds_out_of_bounds = np.array([1, 20, 30])
+        np.testing.assert_array_almost_equal(
             self.bounds.project(input_with_both_bounds_out_of_bounds),
             expected_output_with_both_bounds_out_of_bounds,
         )
@@ -160,7 +176,7 @@ class TestCode(unittest.TestCase):
         bounds = Bounds([(0, 5), (-2, 2), (1, 10), (-6, -5)])
 
         # Test intersection with compatible dimensions
-        center = [2.5, 1.5, 1, -5.5]
+        center = np.array([2.5, 1.5, 1, -5.5])
         delta = 1.5
         expected_output = Bounds([(1, 4), (0, 2), (1, 2.5), (-6, -5)])
         self.assertEqual(
@@ -169,7 +185,27 @@ class TestCode(unittest.TestCase):
         )
 
         # Test intersection with incompatible dimensions
-        center = [2, 0]
+        center = np.array([2, 0])
+        delta = 1.5
+        with self.assertRaises(OptimizationError):
+            bounds.intersection_with_trust_region(center, delta)
+
+    def test_bounds_for_trust_region_subproblem(self):
+        """ """
+        # Create Bounds object for testing
+        bounds = Bounds([(0, 5), (-2, 2), (1, 10), (-6, -5)])
+
+        # Test intersection with compatible dimensions
+        center = np.array([2.5, 1.5, 1, -5.5])
+        delta = 1.5
+        expected_output = Bounds([(-1.5, 1.5), (-1.5, 0.5), (0, 1.5), (-0.5, 0.5)])
+        self.assertEqual(
+            bounds.get_bounds_for_trust_region_subproblem(center, delta).bounds,
+            expected_output.bounds,
+        )
+
+        # Test intersection with incompatible dimensions
+        center = np.array([2, 0])
         delta = 1.5
         with self.assertRaises(OptimizationError):
             bounds.intersection_with_trust_region(center, delta)
@@ -201,23 +237,23 @@ class TestCode(unittest.TestCase):
         bounds = Bounds([(0, 5), (-2, 2), (1, 10)])
 
         # Test feasible with a feasible point
-        point = [2, 0, 5]
+        point = np.array([2, 0, 5])
         self.assertTrue(bounds.feasible(point))
 
         # Test feasible with a point violating the lower bound
-        point = [-1, 0, 5]
+        point = np.array([-1, 0, 5])
         self.assertFalse(bounds.feasible(point))
 
         # Test feasible with a point violating the upper bound
-        point = [2, 0, 11]
+        point = np.array([2, 0, 11])
         self.assertFalse(bounds.feasible(point))
 
         # Test feasible with a point violating both lower and upper bounds
-        point = [-1, 0, 11]
+        point = np.array([-1, 0, 11])
         self.assertFalse(bounds.feasible(point))
 
         # Test feasible with incompatible dimensions
-        point = [2, 0]
+        point = np.array([2, 0])
         with self.assertRaises(OptimizationError):
             bounds.feasible(point)
 
@@ -476,77 +512,227 @@ import numpy as np
 
 
 class TestBounds(unittest.TestCase):
-    def test_generalized_cauchy_point_large_bounds(self):
+    def test_generalized_cauchy_point_convergence(self):
         # Test case inputs
-        x_current = np.array([1.0, 2.0, 3.0])
-        g_current = np.array([0.5, -0.5, 1.0])
-        h_current = np.array([[2.0, 1.0, 0.5], [1.0, 3.0, 0.2], [0.5, 0.2, 1.5]])
+        bounds = Bounds([(-100, 100), (-100, 100)])
 
-        # Instantiate the Bounds class
-        bounds = Bounds([(None, None), (None, None), (None, None)])
+        iterate = np.array([0, 0])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
 
         # Call the generalized_cauchy_point function
-        result = bounds.generalized_cauchy_point(x_current, g_current, h_current)
+        result = bounds.generalized_cauchy_point(iterate, gradient, hessian)
 
         # Define the expected result
-        expected_result = np.array([0.70588235, 2.29411765, 2.41176471])
+        expected_result = np.array([-1, -1])
 
         # Perform the assertion
         np.testing.assert_array_almost_equal(result, expected_result)
 
-    def test_generalized_cauchy_point_bounds_1(self):
+    def test_generalized_cauchy_point_active_bounds(self):
         # Test case inputs
-        x_current = np.array([1.0, 2.0, 3.0])
-        g_current = np.array([0.5, -0.5, 1.0])
-        h_current = np.array([[2.0, 1.0, 0.5], [1.0, 3.0, 0.2], [0.5, 0.2, 1.5]])
+        bounds = Bounds([(-0.5, 100), (-100, 100)])
 
-        # Instantiate the Bounds class
-        bounds = Bounds([(1, None), (None, None), (None, None)])
+        iterate = np.array([0, 0])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
 
         # Call the generalized_cauchy_point function
-        result = bounds.generalized_cauchy_point(x_current, g_current, h_current)
+        result = bounds.generalized_cauchy_point(iterate, gradient, hessian)
 
         # Define the expected result
-        expected_result = np.array([1.0, 2.30487805, 2.3902439])
+        expected_result = np.array([-0.5, -1])
 
         # Perform the assertion
         np.testing.assert_array_almost_equal(result, expected_result)
 
-    def test_generalized_cauchy_point_bounds_2(self):
+    def test_generalized_cauchy_point_all_active_bounds(self):
         # Test case inputs
-        x_current = np.array([1.0, 2.0, 3.0])
-        g_current = np.array([0.5, -0.5, 1.0])
-        h_current = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        bounds = Bounds([(-0.5, 100), (-0.4, 100)])
 
-        # Instantiate the Bounds class
-        bounds = Bounds([(1, None), (None, 2), (None, None)])
+        iterate = np.array([0, 0])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
 
         # Call the generalized_cauchy_point function
-        result = bounds.generalized_cauchy_point(x_current, g_current, h_current)
+        result = bounds.generalized_cauchy_point(iterate, gradient, hessian)
 
         # Define the expected result
-        expected_result = np.array([1.0, 2.0, 2.0])
+        expected_result = np.array([-0.5, -0.4])
 
         # Perform the assertion
         np.testing.assert_array_almost_equal(result, expected_result)
 
-    def test_generalized_cauchy_point_bounds_3(self):
-        # Test case inputs
-        x_current = np.array([1.0, 2.0, 3.0])
-        g_current = np.array([0.5, -0.5, 1.0])
-        h_current = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    def test_conjugate_gradient_convergence(self):
 
-        # Instantiate the Bounds class
-        bounds = Bounds([(1, None), (None, 2), (2.5, None)])
+        bounds = Bounds([(None, None), (None, None)])
 
-        # Call the generalized_cauchy_point function
-        result = bounds.generalized_cauchy_point(x_current, g_current, h_current)
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        expected_solution = np.array([-1, -1])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient(
+            gradient=gradient,
+            hessian=hessian,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
 
-        # Define the expected result
-        expected_result = np.array([1.0, 2.0, 2.5])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 10]])
+        expected_solution = np.array([-1, -0.1])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient(
+            gradient=gradient,
+            hessian=hessian,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
 
-        # Perform the assertion
-        np.testing.assert_array_almost_equal(result, expected_result)
+    def test_conjugate_gradient_convergence_negative_curvature(self):
+
+        bounds = Bounds([(-100, 100), (-100, 100)])
+
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, -1]])
+        expected_solution = np.array([-100, -100])
+        expected_diagnostic = ConjugateGradientDiagnostic.NEGATIVE_CURVATURE
+        solution, diagnostic = bounds.truncated_conjugate_gradient(
+            gradient=gradient,
+            hessian=hessian,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+    def test_conjugate_gradient_convergence_out_of_trust_region(self):
+
+        bounds = Bounds([(None, None), (-0.05, None)])
+
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        expected_solution = np.array([-0.05, -0.05])
+        expected_diagnostic = ConjugateGradientDiagnostic.OUT_OF_TRUST_REGION
+        solution, diagnostic = bounds.truncated_conjugate_gradient(
+            gradient=gradient,
+            hessian=hessian,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 10]])
+        expected_solution = np.array([-0.05, -0.05])
+        expected_diagnostic = ConjugateGradientDiagnostic.OUT_OF_TRUST_REGION
+        solution, diagnostic = bounds.truncated_conjugate_gradient(
+            gradient=gradient,
+            hessian=hessian,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+    def test_conjugate_gradient_subspace_convergence(self):
+
+        bounds = Bounds([(None, None), (None, None)])
+
+        iterate = np.array([0, 0])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        radius = 100
+        expected_solution = np.array([-1, -1])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient_subspace(
+            iterate=iterate,
+            gradient=gradient,
+            hessian=hessian,
+            radius=radius,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+        iterate = np.array([1, 1])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        radius = 100
+        expected_solution = np.array([0, 0])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient_subspace(
+            iterate=iterate,
+            gradient=gradient,
+            hessian=hessian,
+            radius=radius,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+    def test_conjugate_gradient_subspace_convergence(self):
+
+        bounds = Bounds([(None, None), (None, None)])
+
+        iterate = np.array([0, 0])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        radius = 100
+        expected_solution = np.array([-1, -1])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient_subspace(
+            iterate=iterate,
+            gradient=gradient,
+            hessian=hessian,
+            radius=radius,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+        iterate = np.array([1, 1])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        radius = 100
+        expected_solution = np.array([0, 0])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient_subspace(
+            iterate=iterate,
+            gradient=gradient,
+            hessian=hessian,
+            radius=radius,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+    def test_conjugate_gradient_subspace_active(self):
+
+        bounds = Bounds([(-0.5, None), (None, None)])
+
+        iterate = np.array([0, 0])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        radius = 100
+        expected_solution = np.array([-0.5, -1])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient_subspace(
+            iterate=iterate,
+            gradient=gradient,
+            hessian=hessian,
+            radius=radius,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
+
+        bounds = Bounds([(0.5, None), (None, None)])
+
+        iterate = np.array([1, 1])
+        gradient = np.array([1, 1])
+        hessian = np.array([[1, 0], [0, 1]])
+        radius = 100
+        expected_solution = np.array([0.5, 0])
+        expected_diagnostic = ConjugateGradientDiagnostic.CONVERGENCE
+        solution, diagnostic = bounds.truncated_conjugate_gradient_subspace(
+            iterate=iterate,
+            gradient=gradient,
+            hessian=hessian,
+            radius=radius,
+        )
+        np.testing.assert_array_almost_equal(solution, expected_solution)
+        self.assertEqual(diagnostic, expected_diagnostic)
 
 
 if __name__ == '__main__':
