@@ -12,7 +12,7 @@ from scipy.optimize import minimize
 from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.simple_bounds import simple_bounds_newton_algorithm
 
-from examples import MyFunctionToMinimize, Example58, Rosenbrock
+from examples import MyFunctionToMinimize, Rosenbrock
 
 
 def my_function_for_scipy(x):
@@ -44,9 +44,9 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -69,9 +69,9 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -93,9 +93,9 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -118,9 +118,9 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -145,9 +145,9 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -170,9 +170,9 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -195,9 +195,9 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
@@ -220,9 +220,9 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
         ):
 
             solution, messages = simple_bounds_newton_algorithm(
-                the_function,
-                bounds,
-                starting_point,
+                the_function=the_function,
+                bounds=bounds,
+                starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
