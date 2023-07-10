@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 examples/scripts/example_pareto.txt
 examples/scripts/knapsack.pareto
+knapsack.pareto
