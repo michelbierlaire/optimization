@@ -165,7 +165,9 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([0.0, 0.0])
 
         # Call the newton_linesearch function
-        solution, messages = newton_linesearch(fct, starting_point)
+        solution, messages = newton_linesearch(
+            the_function=fct, starting_point=starting_point
+        )
 
         # Check the solution
         np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
@@ -185,7 +187,9 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([0.0, 0.0])
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_linesearch(fct, starting_point)
+        solution, messages = bfgs_linesearch(
+            the_function=fct, starting_point=starting_point
+        )
 
         # Check the solution
         np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
@@ -205,7 +209,9 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([1.0, np.pi])
 
         # Call the newton_linesearch function
-        solution, messages = newton_linesearch(fct, starting_point)
+        solution, messages = newton_linesearch(
+            the_function=fct, starting_point=starting_point
+        )
 
         # Check the solution
         np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
@@ -225,7 +231,9 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([-1.0, 0])
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_linesearch(fct, starting_point)
+        solution, messages = bfgs_linesearch(
+            the_function=fct, starting_point=starting_point
+        )
 
         # Check the solution
         np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
@@ -245,7 +253,9 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([1.0, 1.0])
 
         # Call the newton_linesearch function
-        solution, messages = newton_linesearch(fct, starting_point)
+        solution, messages = newton_linesearch(
+            the_function=fct, starting_point=starting_point
+        )
 
         # Check the solution
         np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
@@ -265,7 +275,9 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([1.0, 1.00])
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_linesearch(fct, starting_point)
+        solution, messages = bfgs_linesearch(
+            the_function=fct, starting_point=starting_point
+        )
 
         # Check the solution
         np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
