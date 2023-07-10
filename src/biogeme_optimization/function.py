@@ -11,7 +11,7 @@ from typing import final
 from collections import namedtuple
 import numpy as np
 
-FunctionData = namedtuple('FunctionData', ['function', 'gradient', 'hessian', 'bhhh'])
+FunctionData = namedtuple('FunctionData', ['function', 'gradient', 'hessian'])
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,6 @@ class FunctionToMinimize(ABC):
         self.stored_values = {}
         self.stored_gradient = {}
         self.stored_hessian = {}
-        self.stored_bhhh = {}
         self.x = None
         self.x_tuple = None
         self.typx = None
@@ -223,30 +222,6 @@ class FunctionToMinimize(ABC):
         """Calculate the value of the function, the gradient and the Hessian
 
         :return: value of the function, the gradient and the Hessian
-        :rtype: FunctionData
-        """
-
-    def f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :return: value of the function, the gradient and the BHHH
-        :rtype: FunctionData
-        """
-        function_data = self.stored_bhhh.get(self.x_tuple)
-        if function_data is None:
-            function_data = self._f_g_h()
-            self.stored_bhhh[self.x_tuple] = function_data
-            self.stored_gradient[self.x_tuple] = function_data
-            self.stored_values[self.x_tuple] = function_data.function
-        return function_data
-
-    @abstractmethod
-    def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :return: value of the function, the gradient and the BHHH
         :rtype: FunctionData
         """
 

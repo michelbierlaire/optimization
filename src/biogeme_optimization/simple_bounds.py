@@ -99,7 +99,6 @@ def simple_bounds_newton_algorithm(
              matrix initBfgs do not match the length of starting_point.
 
     """
-
     dimension = bounds.dimension
     if len(starting_point) != dimension:
         raise OptimizationError(
@@ -144,9 +143,9 @@ def simple_bounds_newton_algorithm(
     columns = [Column(title='Iter.', width=5)]
 
     if variable_names is not None:
-        columns += [Column(title=name, width=10) for name in variable_names]
+        columns += [Column(title=name[:15], width=15) for name in variable_names]
     columns += [
-        Column(title='Function', width=10),
+        Column(title='Function', width=12),
         Column(title='Relgrad', width=10),
         Column(title='Radius', width=8),
         Column(title='Rho', width=8),

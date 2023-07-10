@@ -6,7 +6,6 @@
 Class in charge of the management of bound constraints
 """
 import logging
-from typing import Iterable
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.diagnostics import ConjugateGradientDiagnostic
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def inner_product_subspace(
-    vector_a: np.ndarray, vector_b: np.ndarray, subspace_indices: Iterable
+    vector_a: np.ndarray, vector_b: np.ndarray, subspace_indices
 ) -> float:
 
     """Given two input vectors `vector_a` and `vector_b`, this
@@ -50,7 +49,7 @@ def inner_product_subspace(
 
 
 def matrix_vector_mult_subspace(
-    matrix: np.ndarray, vector: np.ndarray, subspace_indices: Iterable
+    matrix: np.ndarray, vector: np.ndarray, subspace_indices
 ) -> np.ndarray:
     """Performs matrix-vector multiplication involving selected entries of the vector.
 
@@ -222,14 +221,7 @@ class Bounds:
                 f'Incompatible size: {len(point)}' f' and {self.dimension}'
             )
 
-        new_point = np.array(
-            point
-        )  # Create a copy of point to avoid modifying the original list in place
-        for i in range(self.dimension):
-            if self.lower_bounds[i] is not None and point[i] < self.lower_bounds[i]:
-                new_point[i] = self.lower_bounds[i]
-            elif self.upper_bounds[i] is not None and point[i] > self.upper_bounds[i]:
-                new_point[i] = self.upper_bounds[i]
+        new_point = np.clip(point, self.lower_bounds, self.upper_bounds)
         return new_point
 
     def intersect(self, other_bounds):
@@ -281,9 +273,12 @@ class Bounds:
         :return: intersection between the feasible region and the trust region
         :rtype: class Bounds
 
-        :raises OptimizationError: if the dimensions are inconsistent
+        :raises OptimizationError: if the point is not feasible
 
         """
+        if not self.feasible(point):
+            error_msg = f'Center of the trust region of radius {radius} is not feasible'
+            raise OptimizationError(error_msg)
         trust_region = Bounds.from_bounds(point - radius, point + radius)
         return self.intersect(trust_region)
 
@@ -359,17 +354,11 @@ class Bounds:
             raise OptimizationError(
                 f'Incompatible size: ' f'point:{point.size} and {self.dimension}'
             )
-        for i in range(self.dimension):
-            if (
-                self.lower_bounds[i] is not None
-                and self.lower_bounds[i] - point[i] > np.finfo(float).eps
-            ):
-                return False
-            if (
-                self.upper_bounds[i] is not None
-                and point[i] - self.upper_bounds[i] > np.finfo(float).eps
-            ):
-                return False
+
+        if np.any(self.lower_bounds - point > np.finfo(float).eps):
+            return False
+        if np.any(point - self.upper_bounds > np.finfo(float).eps):
+            return False
         return True
 
     def maximum_step(self, point, direction):
@@ -874,6 +863,10 @@ class Bounds:
             raise OptimizationError(
                 'Invalid input: iterate, gradient, or hessian contains NaN values.'
             )
+
+        # For numerical reasons, it is better to project the iterate
+        # on the bounds, although it should be feasible.
+        iterate = self.project(iterate)
 
         # First, we calculate the intersection between the trust region on
         # the bounds. The trust region is also a bound constraint (based

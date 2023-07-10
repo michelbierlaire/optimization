@@ -117,7 +117,6 @@ class HybridFunction:
             function=function_data.function,
             gradient=function_data.gradient,
             hessian=hessian,
-            bhhh=None,
         )
         return final_function_data
 

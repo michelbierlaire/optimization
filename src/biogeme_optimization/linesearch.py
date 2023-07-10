@@ -125,7 +125,14 @@ class InverseBfgsDirection(DirectionManagement):
 
 
 def linesearch(
-    fct, iterate, descent_direction, alpha0=1.0, beta1=1.0e-4, beta2=0.99, lbd=2.0
+    fct,
+    iterate,
+    descent_direction,
+    alpha0=1.0,
+    beta1=1.0e-4,
+    beta2=0.99,
+    lbd=2.0,
+    maxiter=1000,
 ):
     """
     Calculate a step along a direction that satisfies both Wolfe conditions
@@ -161,8 +168,6 @@ def linesearch(
                                              direction
 
     """
-    MAX_ITERATIONS = 1000
-
     if lbd <= 1:
         raise OptimizationError(f'lambda is {lbd} and must be > 1')
     if alpha0 <= 0:
@@ -187,7 +192,7 @@ def linesearch(
     alpha = alpha0
     alphal = 0
     alphar = np.inf
-    for _ in range(MAX_ITERATIONS):
+    for _ in range(maxiter):
         candidate = iterate + alpha * descent_direction
         fct.set_variables(candidate)
         candidate_evaluation = fct.f_g()
@@ -268,7 +273,7 @@ def minimization_with_line_search(
     return xk, messages
 
 
-def newton_linesearch(the_function, starting_point, maxiter=1000):
+def newton_linesearch(*, the_function, starting_point, maxiter=1000):
     """
     Newton method with inexact line search (Wolfe conditions)
 
@@ -300,6 +305,7 @@ def newton_linesearch(the_function, starting_point, maxiter=1000):
 
 
 def bfgs_linesearch(
+    *,
     the_function,
     starting_point,
     init_bfgs=None,

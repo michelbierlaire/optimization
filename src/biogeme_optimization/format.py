@@ -6,7 +6,7 @@
 Object that formats the information of each iteration
 """
 from collections import namedtuple
-from typing import Union
+import numpy as np
 
 Column = namedtuple('Column', ['title', 'width'])
 
@@ -16,7 +16,7 @@ class FormattedColumns:
     Class for formatting the output of iterations
     """
 
-    def __init__(self, columns: list[Column]):
+    def __init__(self, columns):
         """
         Initialize a FormattedColumns object.
 
@@ -44,7 +44,7 @@ class FormattedColumns:
         """
         return ' '.join(col.title.rjust(col.width) for col in self.columns)
 
-    def formatted_row(self, values: list[Union[str, int, float]]) -> str:
+    def formatted_row(self, values) -> str:
         """
         Generate a formatted row based on the given values.
 
@@ -66,7 +66,7 @@ class FormattedColumns:
         )
 
     @staticmethod
-    def _format_value(column: Column, value: Union[str, int, float]) -> str:
+    def _format_value(column: Column, value) -> str:
         """
         Format a value based on the column type.
 
@@ -87,7 +87,7 @@ class FormattedColumns:
         if isinstance(value, float):
             return f'{value:{column.width}.2g}'
 
-        if isinstance(value, int):
+        if isinstance(value, int) or isinstance(value, np.integer):
             return f'{value:{column.width}d}'
 
-        raise ValueError(f'Invalid column type: {type(value)}')
+        raise ValueError(f'Invalid column type: {type(value)} for value {value}')

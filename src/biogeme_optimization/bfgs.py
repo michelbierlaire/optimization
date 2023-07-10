@@ -7,6 +7,7 @@ Functions for the BFGS algorithm
 """
 
 import logging
+import traceback
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
 
@@ -33,6 +34,11 @@ def bfgs(hessian_approx, delta_x, delta_g):
     :rtype: numpy.array (2D)
 
     """
+    if np.all(delta_x == 0):
+        raise OptimizationError('In BFGS, the step cannot be zero')
+
+    if np.all(delta_g == 0):
+        raise OptimizationError('In BFGS, the gradient difference cannot be zero')
     h_d = hessian_approx @ delta_x
     d_h_d = np.inner(delta_x, h_d)
     denom = np.inner(delta_x, delta_g)

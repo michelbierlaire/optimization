@@ -13,7 +13,6 @@ from biogeme_optimization.diagnostics import (
     ConjugateGradientDiagnostic,
 )
 from biogeme_optimization.exceptions import OptimizationError
-from biogeme_optimization.function import relative_gradient
 from biogeme_optimization.algebra import schnabel_eskow_direction
 from biogeme_optimization.bfgs import bfgs
 
@@ -46,6 +45,8 @@ class QuadraticModel(ABC):
 
 
 class NewtonModel(QuadraticModel):
+    """Call implementing the quadratic model based on the analytical hessian"""
+
     def get_f_g_h(self, iterate):
         """Obtain the vector g and the matrix h characterizing the model
 
@@ -64,6 +65,8 @@ class NewtonModel(QuadraticModel):
 
 
 class BfgsModel(QuadraticModel):
+    """Call implementing the quadratic model based on the BFGS approximation"""
+
     def __init__(self, function, first_approximation=None):
         """Constructor
 
@@ -107,8 +110,8 @@ class BfgsModel(QuadraticModel):
             # Update the approximation, if possible
             try:
                 self.hessian_approx = bfgs(self.hessian_approx, delta_x, delta_g)
-            except OptimizationError as e:
-                logger.warning(e)
+            except OptimizationError as err:
+                logger.warning(err)
         self.last_iterate = iterate
         self.last_gradient = evaluation.gradient
         return evaluation.function, evaluation.gradient, self.hessian_approx
@@ -361,7 +364,8 @@ def truncated_conjugate_gradient(gradient, hessian, radius, tol=1.0e-6):
                 step = xk
                 return step, diagnostic
         except ValueError:
-            # Numerical problem. We follow the last direction until the border of the trust region
+            # Numerical problem. We follow the last direction until
+            # the border of the trust region
             diagnostic = ConjugateGradientDiagnostic.NUMERICAL_PROBLEM
             step = trust_region_intersection(xk, dk, radius, check_step=False)
             solution = xk + step * dk
@@ -420,12 +424,13 @@ def minimization_with_trust_region(
 
     """
     xk = starting_point
+    value_iterate, g, h = quadratic_model.get_f_g_h(xk)
     radius = initial_radius
     max_delta = np.finfo(float).max
     min_delta = np.finfo(float).eps
     rho = 0.0
     for k in range(maxiter):
-        value_iterate, g, h = quadratic_model.get_f_g_h(xk)
+        # If the iterate is optimal, the returned value is None
         if value_iterate is None:
             messages = the_function.messages
             messages['Number of iterations'] = k
@@ -438,23 +443,26 @@ def minimization_with_trust_region(
         if value_candidate >= value_iterate:
             radius = np.linalg.norm(step) / 2.0
             status = '-'
+            continue
+
+        num = value_iterate - value_candidate
+        denom = -np.inner(step, g) - 0.5 * np.inner(step, h @ step)
+        rho = num / denom
+        if rho < eta1:
+            # Failure: reduce the trust region
+            radius = np.linalg.norm(step) / 2.0
+            status = '-'
+            continue
+
+        # Candidate accepted
+        xk = candidate
+        value_iterate, g, h = quadratic_model.get_f_g_h(xk)
+        if rho >= eta2:
+            # Enlarge the trust region
+            radius = min(2 * radius, max_delta)
+            status = '++'
         else:
-            num = value_iterate - value_candidate
-            denom = -np.inner(step, g) - 0.5 * np.inner(step, h @ step)
-            rho = num / denom
-            if rho < eta1:
-                # Failure: reduce the trust region
-                radius = np.linalg.norm(step) / 2.0
-                status = '-'
-            else:
-                # Candidate accepted
-                xk = candidate
-                if rho >= eta2:
-                    # Enlarge the trust region
-                    radius = min(2 * radius, max_delta)
-                    status = '++'
-                else:
-                    status = '+'
+            status = '+'
         if radius <= min_delta:
             messages = the_function.messages
             messages['Cause of termination'] = f'Trust region is too small: {radius}'
@@ -469,6 +477,7 @@ def minimization_with_trust_region(
 
 
 def newton_trust_region(
+    *,
     the_function,
     starting_point,
     use_dogleg=False,
@@ -539,6 +548,7 @@ def newton_trust_region(
 
 
 def bfgs_trust_region(
+    *,
     the_function,
     starting_point,
     init_bfgs=None,
@@ -588,7 +598,6 @@ def bfgs_trust_region(
     :rtype: numpy.array, dict(str:object)
 
     """
-
     the_model = BfgsModel(the_function, init_bfgs)
 
     if use_dogleg:
