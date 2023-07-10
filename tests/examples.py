@@ -37,7 +37,7 @@ class MyFunctionToMinimize(FunctionToMinimize):
         """
         half_sum_of_squares = np.sum(np.square(self.x)) / 2
         result = FunctionData(
-            function=half_sum_of_squares, gradient=self.x, hessian=None, bhhh=None
+            function=half_sum_of_squares, gradient=self.x, hessian=None
         )
         return result
 
@@ -52,18 +52,8 @@ class MyFunctionToMinimize(FunctionToMinimize):
             function=half_sum_of_squares,
             gradient=self.x,
             hessian=np.eye(len(self.x)),
-            bhhh=None,
         )
         return result
-
-    def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :return: value of the function, the gradient and the BHHH
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        raise OptimizationError('BHHH is irrelevant in this context')
 
 
 class Example58(FunctionToMinimize):
@@ -94,7 +84,7 @@ class Example58(FunctionToMinimize):
         """
         f = self.f()
         g = np.array([self.x[0] + np.cos(self.x[1]), -self.x[0] * np.sin(self.x[1])])
-        result = FunctionData(function=f, gradient=g, hessian=None, bhhh=None)
+        result = FunctionData(function=f, gradient=g, hessian=None)
         return result
 
     def _f_g_h(self):
@@ -111,17 +101,8 @@ class Example58(FunctionToMinimize):
                 [-np.sin(self.x[1]), -self.x[0] * np.cos(self.x[1])],
             ]
         )
-        result = FunctionData(function=f, gradient=g, hessian=h, bhhh=None)
+        result = FunctionData(function=f, gradient=g, hessian=h)
         return result
-
-    def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :return: value of the function, the gradient and the BHHH
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        raise OptimizationError('BHHH is irrelevant in this context')
 
 
 class Rosenbrock(FunctionToMinimize):
@@ -161,7 +142,7 @@ class Rosenbrock(FunctionToMinimize):
                 200.0 * self.x[1] - 200.0 * self.x[0] ** 2,
             ]
         )
-        result = FunctionData(function=f, gradient=g, hessian=None, bhhh=None)
+        result = FunctionData(function=f, gradient=g, hessian=None)
         return result
 
     def _f_g_h(self):
@@ -186,14 +167,5 @@ class Rosenbrock(FunctionToMinimize):
                 [-400 * self.x[0], 200],
             ]
         )
-        result = FunctionData(function=f, gradient=g, hessian=h, bhhh=None)
+        result = FunctionData(function=f, gradient=g, hessian=h)
         return result
-
-    def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
-        the BHHH matrix
-
-        :return: value of the function, the gradient and the BHHH
-        :rtype: tuple float, numpy.array, numpy.array
-        """
-        raise OptimizationError('BHHH is irrelevant in this context')
