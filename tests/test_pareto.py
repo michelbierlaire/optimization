@@ -99,7 +99,7 @@ class TestPareto(unittest.TestCase):
         self.assertEqual(len(pareto.removed), 1)
 
         # Dump the Pareto set to a file
-        pareto.dump([])
+        pareto.dump()
 
         # Create a new Pareto object and restore from the file
         restored_pareto = Pareto(self.filename)
