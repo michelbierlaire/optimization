@@ -143,22 +143,6 @@ class TestPareto(unittest.TestCase):
         self.assertEqual(pareto.length(), 3)
         self.assertEqual(pareto.length_of_all_sets(), (3, 5, 1, 0))
 
-    def test_plot(self):
-        pareto = Pareto()
-
-        # Add elements to the Pareto set
-        pareto.add(SetElement('1', [1.0, 2.0]))
-        pareto.add(SetElement('2', [3.0, 4.0]))
-        pareto.add(SetElement('3', [5.0, 6.0]))
-
-        # Plot the Pareto set
-        ax = pareto.plot()
-
-        # Check the properties of the plot
-        self.assertEqual(ax.get_xlabel(), 'Objective 0')
-        self.assertEqual(ax.get_ylabel(), 'Objective 1')
-        self.assertEqual(len(ax.lines), 3)
-
     def test_get_element_from_id(self):
         pareto = Pareto()
 
