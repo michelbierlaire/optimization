@@ -137,6 +137,7 @@ def vns(
     :raise OptimizationError: if the first Pareto set is empty.
 
     """
+    print('*** VNS ***')
     if first_solutions is not None:
         for solution in first_solutions:
             valid, why = problem.is_valid(solution)
