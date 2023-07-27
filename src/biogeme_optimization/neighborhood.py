@@ -44,6 +44,17 @@ class OperatorsManagement:
 
         self.last_operator_name = None
 
+        # This quantity has been calculated to that if one operator
+        # has a score of 10, another has a score of -10, and all the
+        # others have a score of 1, the operator with the highest
+        # score is associated with a probability of about 0.9,
+        # irrespectively of the number of operators
+        self.scale = (
+            0.123184457025228 * np.log(float(len(self.scores)))
+            + 0.163017205688887
+        )
+        self.min_probability = 0.1 / len(self.scores)
+
     def increase_score_last_operator(self):
         """Increase the score of the last operator.
 
@@ -65,18 +76,8 @@ class OperatorsManagement:
 
         self.scores[self.last_operator_name] -= 1
 
-    def probability_from_scores(self, min_probability=0.01, scale=0.1):
+    def probability_from_scores(self):
         """Calculates the probability from the scores
-
-        :param min_probability: minimum probability to select any
-                               operator. This is meant to avoid
-                               degeneracy, that is to have operators
-                               that have no chance to be chosen
-
-        :type min_probability: float
-
-        :param scale: parameter for the choice probability
-        :type scale: float
 
         :return: list of probabilities
         :rtype: list(float)
@@ -87,10 +88,10 @@ class OperatorsManagement:
 
 
         """
-        if min_probability > 1.0 / len(self.scores):
+        if self.min_probability > 1.0 / len(self.scores):
             raise OptimizationError(
                 f'Cannot impose min. probability '
-                f'{min_probability} '
+                f'{self.min_probability} '
                 f'with {len(self.scores)} operators. '
                 f'Maximum is {1.0 / len(self.scores):.3f}.'
             )
@@ -98,7 +99,7 @@ class OperatorsManagement:
         maxscore = max(list(self.scores.values()))
         list_of_scores = np.array(
             [
-                np.exp(scale * (s - maxscore)) if self.available[k] else 0
+                np.exp(self.scale * (s - maxscore)) if self.available[k] else 0
                 for k, s in self.scores.items()
             ]
         )
@@ -106,10 +107,21 @@ class OperatorsManagement:
             return None
         total_score = sum(list_of_scores)
         prob = np.array([float(s) / float(total_score) for s in list_of_scores])
-        return self.enforce_minimum_probability(prob, min_probability)
+        return self.enforce_minimum_probability(prob, self.min_probability)
 
     @staticmethod
     def enforce_minimum_probability(prob, min_probability):
+        """
+        :param prob: vector of probabilities
+        :type prob: numpy.array
+        
+        :param min_probability: minimum probability to select any
+                               operator. This is meant to avoid
+                               degeneracy, that is to have operators
+                               that have no chance to be chosen
+        :type min_probability: float
+
+        """
         # Enforce minimum probability
         if not np.isclose(np.sum(prob), 1.0):
             error_msg = (
@@ -148,24 +160,14 @@ class OperatorsManagement:
         prob[update] = min_probability
         return prob
 
-    def select_operator(self, min_probability=0.01, scale=0.1):
+    def select_operator(self):
         """Select an operator based on the scores
-
-        :param min_probability: minimum probability to select any
-                               operator. This is meant to avoid
-                               degeneracy, that is to have operators
-                               that have no chance to be chosen
-
-        :type min_probability: float
-
-        :param scale: parameter for the choice probability
-        :type scale: float
 
         :return: name of the selected operator
         :rtype: str
 
         """
-        prob = self.probability_from_scores(min_probability, scale)
+        prob = self.probability_from_scores()
         self.last_operator_name = np.random.choice(self.names, 1, p=prob)[0]
         return self.operators[self.last_operator_name]
 
