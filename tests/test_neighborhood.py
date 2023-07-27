@@ -57,9 +57,7 @@ class TestOperatorsManagement(unittest.TestCase):
         # Mocking np.random.choice to always return 'operator1'
         chosen = ('operator1',)
         with patch('numpy.random.choice', return_value=chosen):
-            operator = self.op_management.select_operator(
-                min_probability=0.01, scale=0.1
-            )
+            operator = self.op_management.select_operator()
             self.assertEqual(operator, self.operators['operator1'])
 
     def test_select_operator_with_unavailable_operators(self):
@@ -67,23 +65,21 @@ class TestOperatorsManagement(unittest.TestCase):
         # Mocking np.random.choice to always return 'operator1'
         chosen = ('operator1',)
         with patch('numpy.random.choice', return_value=chosen):
-            operator = self.op_management.select_operator(
-                min_probability=0.01, scale=0.1
-            )
+            operator = self.op_management.select_operator()
             self.assertEqual(operator, self.operators['operator1'])
 
     def test_select_operator_with_min_probability(self):
         # Mocking np.random.choice to always return 'operator1'
         chosen = ('operator1',)
         with patch('numpy.random.choice', return_value=chosen):
-            operator = self.op_management.select_operator(
-                min_probability=0.5, scale=0.1
-            )
+            self.op_management.min_probability = 0.5
+            operator = self.op_management.select_operator()
             self.assertEqual(operator, self.operators['operator1'])
 
     def test_select_operator_with_large_min_probability(self):
         with self.assertRaises(OptimizationError):
-            self.op_management.select_operator(min_probability=0.7, scale=0.1)
+            self.op_management.min_probability = 0.7
+            self.op_management.select_operator()
 
     def test_probability(self):
         self.op_management.available = [True, True, True]
