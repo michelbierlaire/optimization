@@ -336,10 +336,7 @@ class Pareto:
         if self.pareto is None:
             return tuple()
         msg = (
-            f'Initial Pareto: {self.size_init_pareto} ',
-            f'Initial considered: {self.size_init_considered} ',
-            f'Initial invalid: {self.size_init_invalid} ',
-            f'Final Pareto: {len(self.pareto)} ',
+            f'Pareto: {len(self.pareto)} ',
             f'Condidered: {len(self.considered)} ',
             f'Removed: {len(self.removed)}',
         )
