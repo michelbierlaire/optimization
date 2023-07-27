@@ -183,7 +183,7 @@ def simple_bounds_newton_algorithm(
             values_to_report += [
                 current_function.function,
                 the_function.relgrad,
-                radius,
+                float(radius),
                 rho,
                 status,
             ]
