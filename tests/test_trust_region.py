@@ -369,30 +369,32 @@ class TestAlgorithms(unittest.TestCase):
         expected_solution = np.array([0.0, 0.0])
 
         # Call the newton_linesearch function
-        solution, messages = newton_trust_region(
+        optimization_results = newton_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=True
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
         # Call the newton_linesearch function
-        solution, messages = newton_trust_region(
+        optimization_results = newton_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=False
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
     def test_bfgs_trust_region(self):
         fct = MyFunctionToMinimize(dimension=2)
@@ -404,30 +406,31 @@ class TestAlgorithms(unittest.TestCase):
         expected_solution = np.array([0.0, 0.0])
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_trust_region(
+        optimization_results = bfgs_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=True
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
-
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_trust_region(
+        optimization_results = bfgs_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=False
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
     def test_newton_trust_region_ex58(self):
         fct = Example58()
@@ -439,30 +442,33 @@ class TestAlgorithms(unittest.TestCase):
         expected_solution = np.array([-1.0, 0])
 
         # Call the newton_linesearch function
-        solution, messages = newton_trust_region(
+        optimization_results = newton_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=True
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 7.1e-07 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 7.1e-07 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
         # Call the newton_linesearch function
-        solution, messages = newton_trust_region(
+        optimization_results = newton_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=False
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 1.5e-09 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 1.5e-09 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
+        
 
     def test_bfgs_trust_region_ex58(self):
         fct = Example58()
@@ -474,30 +480,32 @@ class TestAlgorithms(unittest.TestCase):
         expected_solution = np.array([-1, 0])
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_trust_region(
+        optimization_results = bfgs_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=True
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
 
         # Check the termination message
-        termination_mesage = messages['Cause of termination']
+        termination_mesage = optimization_results.messages['Cause of termination']
         expected_termination_message = 'Relative gradient = ...'
         self.assertEqual(termination_mesage[:19], expected_termination_message[:19])
+        self.assertTrue(optimization_results.convergence)
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_trust_region(
+        optimization_results = bfgs_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=False
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
 
         # Check the termination message
-        termination_mesage = messages['Cause of termination']
+        termination_mesage = optimization_results.messages['Cause of termination']
         expected_termination_message = 'Relative gradient = ...'
         self.assertEqual(termination_mesage[:19], expected_termination_message[:19])
+        self.assertTrue(optimization_results.convergence)
 
     def test_newton_trust_region_rosenbrock(self):
         fct = Rosenbrock()
@@ -509,30 +517,32 @@ class TestAlgorithms(unittest.TestCase):
         expected_solution = np.array([1.0, 1.0])
 
         # Call the newton_linesearch function
-        solution, messages = newton_trust_region(
+        optimization_results = newton_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=True
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 2.6e-06 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 2.6e-06 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
         # Call the newton_linesearch function
-        solution, messages = newton_trust_region(
+        optimization_results = newton_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=False
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
 
         # Check the termination message
         self.assertEqual(
-            messages['Cause of termination'], 'Relative gradient = 9.8e-10 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'], 'Relative gradient = 9.8e-10 <= 6.1e-06'
         )
+        self.assertTrue(optimization_results.convergence)
 
     def test_bfgs_trust_region_rosenbrock(self):
         fct = Rosenbrock()
@@ -544,7 +554,7 @@ class TestAlgorithms(unittest.TestCase):
         expected_solution = np.array([1.0, 1.0])
 
         # Call the newton_linesearch function
-        solution, messages = bfgs_trust_region(
+        optimization_results = bfgs_trust_region(
             the_function=fct,
             starting_point=starting_point,
             use_dogleg=True,
@@ -552,15 +562,16 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
 
         # Check the termination message
-        termination_mesage = messages['Cause of termination']
+        termination_mesage = optimization_results.messages['Cause of termination']
         expected_termination_message = 'Relative gradient = ...'
         self.assertEqual(termination_mesage[:19], expected_termination_message[:19])
-
+        self.assertTrue(optimization_results.convergence)
+        
         # Call the newton_linesearch function
-        solution, messages = bfgs_trust_region(
+        optimization_results = bfgs_trust_region(
             the_function=fct,
             starting_point=starting_point,
             use_dogleg=False,
@@ -568,12 +579,13 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
 
         # Check the termination message
-        termination_mesage = messages['Cause of termination']
+        termination_mesage = optimization_results.messages['Cause of termination']
         expected_termination_message = 'Relative gradient = ...'
         self.assertEqual(termination_mesage[:19], expected_termination_message[:19])
+        self.assertTrue(optimization_results.convergence)
 
 
 if __name__ == '__main__':

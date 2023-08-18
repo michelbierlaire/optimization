@@ -101,6 +101,7 @@ def matrix_vector_mult_subspace(
 class Bounds:
     """This class is designed for the management of simple bound constraints."""
 
+    INFINITY = np.sqrt(np.finfo(float).max)
     def __init__(self, bounds):
         """Constructor.
 
@@ -125,7 +126,7 @@ class Bounds:
 
             """
             if value is None:
-                return -np.inf
+                return -self.INFINITY
 
             return value
 
@@ -142,7 +143,7 @@ class Bounds:
 
             """
             if value is None:
-                return np.inf
+                return self.INFINITY
 
             return value
 
@@ -671,6 +672,7 @@ class Bounds:
                 '[LB: {self.lower_bounds} UB: {self.upper_bounds}]'
             )
 
+
         x = x_current
         g = g_current - h_current @ x_current
         direction = self.projected_direction(x_current, -g_current)
@@ -691,7 +693,6 @@ class Bounds:
         while len(J) < self.dimension:
             # Calculate the maximum step that can be done in the current direction
             delta_t, _ = self.maximum_step(x, direction)
-
             # Test whether the GCP has been found
             ratio = -fprime / fsecond
 
@@ -723,8 +724,7 @@ class Bounds:
             fprime += delta_t * fsecond - np.inner(b, x) - d_dot_g
             fsecond += np.inner(b, bd - 2 * direction)
             direction[list(activated)] = 0.0
-
-            if fprime >= 0:
+            if np.all(direction == 0) or fprime >= 0:
                 return x
 
         return x

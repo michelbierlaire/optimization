@@ -9,6 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 import numpy as np
 from biogeme_optimization.diagnostics import (
+    OptimizationResults,
     DoglegDiagnostic,
     ConjugateGradientDiagnostic,
 )
@@ -133,10 +134,16 @@ def trust_region_intersection(
 
     :param inside_direction: xc - xhat.
     :type inside_direction: numpy.array
+
     :param crossing_direction: dd - dc
     :type crossing_direction: numpy.array
+
     :param radius: radius of the trust region.
     :type radius: float
+
+    :param check_step: if True, an exception is raised if the value of
+        the step is out of the interval [0,1]
+    :type check_step: bool
 
     :return: :math:`\\lambda` such that :math:`\\| d_c +
               \\lambda (d_d - d_c)\\| = \\delta`
@@ -404,7 +411,7 @@ def minimization_with_trust_region(
                     is reached. Default: 1000.
     :type maxiter: int
 
-    :param inital_radius: initial radius of the trust region. Default: 100.
+    :param initial_radius: initial radius of the trust region.
     :type initial_radius: float
 
     :param eta1: threshold for failed iterations. Default: 0.01.
@@ -413,14 +420,14 @@ def minimization_with_trust_region(
     :param eta2: threshold for very successful iterations. Default 0.9.
     :type eta2: float
 
-    :return: tuple x, messages, where
+    :return: named tuple:
 
-            - x is the solution found,
-
-            - messages is a dictionary reporting various aspects
+            - solution is the solution found,
+            - message is a dictionary reporting various aspects
               related to the run of the algorithm.
+            - convergence is a bool which is True if the algorithm has converged
 
-    :rtype: numpy.array, dict(str:object)
+    :rtype: OptimizationResults
 
     """
     xk = starting_point
@@ -434,6 +441,11 @@ def minimization_with_trust_region(
         if value_iterate is None:
             messages = the_function.messages
             messages['Number of iterations'] = k
+            optimization_results = OptimizationResults(
+                solution=xk,
+                messages=messages,
+                convergence=True
+            )
             break
         step, _ = solving_trust_region_subproblem(g, h, radius)
         candidate = xk + step
@@ -466,14 +478,24 @@ def minimization_with_trust_region(
         if radius <= min_delta:
             messages = the_function.messages
             messages['Cause of termination'] = f'Trust region is too small: {radius}'
+            optimization_results = OptimizationResults(
+                solution=xk,
+                messages=messages,
+                convergence=False
+            )
             break
     else:
         messages = the_function.messages
         messages[
             'Cause of termination'
         ] = f'Maximum number of iterations reached: {maxiter}'
+        optimization_results = OptimizationResults(
+            solution=xk,
+            messages=messages,
+            convergence=False
+        )
 
-    return xk, messages
+    return optimization_results
 
 
 def newton_trust_region(
@@ -503,7 +525,7 @@ def newton_trust_region(
                     is reached. Default: 1000.
     :type maxiter: int
 
-    :param inital_radius: initial radius of the trust region. Default: 100.
+    :param initial_radius: initial radius of the trust region. Default: 100.
     :type initial_radius: float
 
     :param eta1: threshold for failed iterations. Default: 0.01.
@@ -512,14 +534,14 @@ def newton_trust_region(
     :param eta2: threshold for very successful iterations. Default 0.9.
     :type eta2: float
 
-    :return: tuple x, messages, where
+    :return: named tuple:
 
-            - x is the solution found,
-
-            - messages is a dictionary reporting various aspects
+            - solution is the solution found,
+            - message is a dictionary reporting various aspects
               related to the run of the algorithm.
+            - convergence is a bool which is True if the algorithm has converged
 
-    :rtype: numpy.array, dict(str:object)
+    :rtype: OptimizationResults
 
     """
     the_model = NewtonModel(the_function)
@@ -579,7 +601,7 @@ def bfgs_trust_region(
                     is reached. Default: 1000.
     :type maxiter: int
 
-    :param inital_radius: initial radius of the trust region. Default: 100.
+    :param initial_radius: initial radius of the trust region. Default: 100.
     :type initial_radius: float
 
     :param eta1: threshold for failed iterations. Default: 0.01.
@@ -588,14 +610,14 @@ def bfgs_trust_region(
     :param eta2: threshold for very successful iterations. Default 0.9.
     :type eta2: float
 
-    :return: tuple x, messages, where
+    :return: named tuple:
 
-            - x is the solution found,
-
-            - messages is a dictionary reporting various aspects
+            - solution is the solution found,
+            - message is a dictionary reporting various aspects
               related to the run of the algorithm.
+            - convergence is a bool which is True if the algorithm has converged
 
-    :rtype: numpy.array, dict(str:object)
+    :rtype: OptimizationResults
 
     """
     the_model = BfgsModel(the_function, init_bfgs)

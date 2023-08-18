@@ -3,9 +3,17 @@
 :author: Michel Bierlaire
 :date: Wed Jun 28 16:17:43 2023
 
-Classes for alogithm diagnostics
+Classes for algorithm diagnostics
 """
+import numpy as np
 from enum import Enum, auto
+from typing import NamedTuple
+
+
+class OptimizationResults(NamedTuple):
+    solution: np.ndarray
+    messages: dict[str, str]
+    convergence: bool
 
 
 class DoglegDiagnostic(Enum):

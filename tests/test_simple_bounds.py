@@ -43,14 +43,15 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution)
+            np.testing.assert_array_almost_equal(optimization_results.solution, expected_solution)
+            self.assertTrue(optimization_results.convergence)
 
     def test_2(self):
         the_function = MyFunctionToMinimize(dimension=3)
@@ -68,14 +69,15 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution)
+            np.testing.assert_array_almost_equal(optimization_results.solution, expected_solution)
+            self.assertTrue(optimization_results.convergence)
 
     def test_3(self):
         the_function = MyFunctionToMinimize(dimension=3)
@@ -92,14 +94,15 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
         for proportion_analytical_hessian, first_radius in itertools.product(
             values_proportion_analytical_hessian, values_first_radius
         ):
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution)
+            np.testing.assert_array_almost_equal(optimization_results.solution, expected_solution)
+            self.assertTrue(optimization_results.convergence)
 
     def test_4(self):
         the_function = MyFunctionToMinimize(dimension=3)
@@ -117,14 +120,15 @@ class TestSimpleBoundsSimpleQuadratic(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution)
+            np.testing.assert_array_almost_equal(optimization_results.solution, expected_solution)
+            self.assertTrue(optimization_results.convergence)
 
 
 class TestSimpleBoundsRosenbrock(unittest.TestCase):
@@ -144,14 +148,19 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
+            np.testing.assert_array_almost_equal(
+                optimization_results.solution,
+                expected_solution,
+                decimal=3
+            )
+            self.assertTrue(optimization_results.convergence)
 
     def test_2(self):
         the_function = Rosenbrock()
@@ -169,14 +178,19 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
+            np.testing.assert_array_almost_equal(
+                optimization_results.solution,
+                expected_solution,
+                decimal=3
+            )
+            self.assertTrue(optimization_results.convergence)
 
     def test_3(self):
         the_function = Rosenbrock()
@@ -194,14 +208,19 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
+            np.testing.assert_array_almost_equal(
+                optimization_results.solution,
+                expected_solution,
+                decimal=3
+            )
+            self.assertTrue(optimization_results.convergence)
 
     def test_4(self):
         the_function = Rosenbrock()
@@ -219,14 +238,19 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
             values_proportion_analytical_hessian, values_first_radius
         ):
 
-            solution, messages = simple_bounds_newton_algorithm(
+            optimization_results = simple_bounds_newton_algorithm(
                 the_function=the_function,
                 bounds=bounds,
                 starting_point=starting_point,
                 proportion_analytical_hessian=proportion_analytical_hessian,
                 first_radius=first_radius,
             )
-            np.testing.assert_array_almost_equal(solution, expected_solution, decimal=3)
+            np.testing.assert_array_almost_equal(
+                optimization_results.solution,
+                expected_solution,
+                decimal=3
+            )
+            self.assertTrue(optimization_results.convergence)
 
 
 if __name__ == '__main__':
