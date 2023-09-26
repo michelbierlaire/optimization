@@ -15,6 +15,7 @@ FunctionData = namedtuple('FunctionData', ['function', 'gradient', 'hessian'])
 
 logger = logging.getLogger(__name__)
 
+SQRT_EPSILON = np.sqrt(np.finfo(np.float64).eps)
 
 class FunctionToMinimize(ABC):
     """This is an abstract class. The actual function to minimize
@@ -46,7 +47,7 @@ class FunctionToMinimize(ABC):
         self.stored_gradient = {}
         self.stored_hessian = {}
         self.x = None
-        self.x_tuple = None
+        self.x_bytes = None
         self.typx = None
         self.typf = None
         self.relgrad = None
@@ -156,7 +157,7 @@ class FunctionToMinimize(ABC):
         :type x: numpy.array
         """
         self.x = x
-        self.x_tuple = tuple(x)
+        self.x_bytes = x.tobytes()
 
     @final
     def f(self):
@@ -165,10 +166,11 @@ class FunctionToMinimize(ABC):
         :return: value of the function
         :rtype: float
         """
-        value = self.stored_values.get(self.x_tuple)
+        value = self.stored_values.get(self.x_bytes)
+        value = None
         if value is None:
             value = self._f()
-            self.stored_values[self.x_tuple] = value
+            self.stored_values[self.x_bytes] = value
         return value
 
     @abstractmethod
@@ -187,11 +189,11 @@ class FunctionToMinimize(ABC):
         :return: value of the function and the gradient
         :rtype: FunctionData
         """
-        function_data = self.stored_gradient.get(self.x_tuple)
+        function_data = self.stored_gradient.get(self.x_bytes)
         if function_data is None:
             function_data = self._f_g()
-            self.stored_gradient[self.x_tuple] = function_data
-            self.stored_values[self.x_tuple] = function_data.function
+            self.stored_gradient[self.x_bytes] = function_data
+            self.stored_values[self.x_bytes] = function_data.function
         return function_data
 
     @abstractmethod
@@ -209,12 +211,12 @@ class FunctionToMinimize(ABC):
         :return: value of the function, the gradient and the Hessian
         :rtype: FunctionData
         """
-        function_data = self.stored_hessian.get(self.x_tuple)
+        function_data = self.stored_hessian.get(self.x_bytes)
         if function_data is None:
             function_data = self._f_g_h()
-            self.stored_hessian[self.x_tuple] = function_data
-            self.stored_gradient[self.x_tuple] = function_data
-            self.stored_values[self.x_tuple] = function_data.function
+            self.stored_hessian[self.x_bytes] = function_data
+            self.stored_gradient[self.x_bytes] = function_data
+            self.stored_values[self.x_bytes] = function_data.function
         return function_data
 
     @abstractmethod
@@ -252,9 +254,9 @@ class FunctionToMinimize(ABC):
 
         """
         x = x.astype(float)
-        tau = 0.0000001
         n = len(x)
         g = np.zeros(n)
+        tau = SQRT_EPSILON
         self.set_variables(x)
         f = self.f()
         for i in range(n):
@@ -329,8 +331,8 @@ class FunctionToMinimize(ABC):
 
         """
         x = np.array(x, dtype=float)
-        self.set_variabls(x)
-        evaluation = self.f_g_h(x)
+        self.set_variables(x)
+        evaluation = self.f_g_h()
         f = evaluation.function
         g = evaluation.gradient
         h = evaluation.hessian
