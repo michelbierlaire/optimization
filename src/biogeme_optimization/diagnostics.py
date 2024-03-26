@@ -5,6 +5,7 @@
 
 Classes for algorithm diagnostics
 """
+
 import numpy as np
 from enum import Enum, auto
 from typing import NamedTuple
@@ -16,8 +17,12 @@ class OptimizationResults(NamedTuple):
     convergence: bool
 
 
-class DoglegDiagnostic(Enum):
-    """Possible aoutcomes of the dogleg method"""
+class Diagnostic(Enum):
+    pass
+
+
+class DoglegDiagnostic(Diagnostic):
+    """Possible outcomes of the dogleg method"""
 
     NEGATIVE_CURVATURE = auto()
     CAUCHY = auto()
@@ -27,7 +32,7 @@ class DoglegDiagnostic(Enum):
     DOGLEG = auto()
 
 
-class ConjugateGradientDiagnostic(Enum):
+class ConjugateGradientDiagnostic(Diagnostic):
     """Possible outcomes of the conjugate gradient method"""
 
     CONVERGENCE = auto()

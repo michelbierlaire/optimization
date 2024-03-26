@@ -4,18 +4,19 @@
 :date: Fri Jul  7 15:18:07 2023
 
 """
+
 import logging
 
-DEBUG = logging.DEBUG
-INFO = logging.INFO
-WARNING = logging.WARNING
-ERROR = logging.ERROR
-CRITICAL = logging.CRITICAL
+DEBUG: int = logging.DEBUG
+INFO: int = logging.INFO
+WARNING: int = logging.WARNING
+ERROR: int = logging.ERROR
+CRITICAL: int = logging.CRITICAL
 
-loggers = (logging.getLogger('biogeme_optimization'),)
+loggers: tuple[logging.Logger, ...] = (logging.getLogger('biogeme_optimization'),)
 
 
-def get_screen_logger(level=WARNING):
+def get_screen_logger(level: int = WARNING) -> logging.Logger:
     """Obtain a screen logger
 
     :param level: level of verbosity of the logger
@@ -23,7 +24,7 @@ def get_screen_logger(level=WARNING):
     """
     for logger in loggers:
         # This has to be set to the lower level: DEBUG so that it does not
-        # supersed the handler
+        # superseed the handler
         logger.setLevel(DEBUG)
         formatter_debug = logging.Formatter(
             '[%(levelname)s] ' '%(asctime)s ' '%(message)s ' '<%(filename)s:%(lineno)d>'
@@ -37,7 +38,7 @@ def get_screen_logger(level=WARNING):
     return loggers[0]
 
 
-def get_file_logger(filename, level=WARNING):
+def get_file_logger(filename: str, level: int = WARNING) -> logging.Logger:
     """Obtain a file logger
 
     :param filename: name of the file. Extension .log recommended.
@@ -48,7 +49,7 @@ def get_file_logger(filename, level=WARNING):
     """
     for logger in loggers:
         # This has to be set to the lower level: DEBUG so that it does not
-        # supersed the handler
+        # superseed the handler
         logger.setLevel(DEBUG)
         formatter = logging.Formatter(
             '[%(levelname)s] ' '%(asctime)s ' '%(message)s ' '<%(filename)s:%(lineno)d>'
@@ -57,4 +58,4 @@ def get_file_logger(filename, level=WARNING):
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    return logger[0]
+    return loggers[0]

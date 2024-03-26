@@ -8,11 +8,15 @@ Abstract class for a neighborhood structure
 
 import logging
 import abc
-from typing import final
+from typing import final, Callable
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
+from biogeme_optimization.pareto import SetElement
 
 logger = logging.getLogger(__name__)
+
+OperatorOutput = tuple[SetElement | None, int]
+Operator = Callable[[SetElement, int], OperatorOutput]
 
 
 class OperatorsManagement:
@@ -20,7 +24,7 @@ class OperatorsManagement:
     Class managing the selection and performance analysis of the operators
     """
 
-    def __init__(self, operators):
+    def __init__(self, operators: dict[str, Operator]):
         """Ctor
 
         :param operators: dict where the keys are the names of the
@@ -31,31 +35,30 @@ class OperatorsManagement:
         :type operators: dict(str: fct)
 
         """
-        self.operators = operators
+        self.operators: dict[str, Operator] = operators
 
-        self.scores = {k: 0 for k in operators}
+        self.scores: dict[str, int] = {k: 0 for k in operators}
         """ dict of scores obtained by the operators"""
 
-        self.names = list(operators.keys())
+        self.names: list[str] = list(operators.keys())
         """ Names of the operators """
 
-        self.available = {k: True for k in operators}
+        self.available: dict[str, bool] = {k: True for k in operators}
         """ dict of availability of the operators """
 
-        self.last_operator_name = None
+        self.last_operator_name: str | None = None
 
         # This quantity has been calculated to that if one operator
         # has a score of 10, another has a score of -10, and all the
         # others have a score of 1, the operator with the highest
         # score is associated with a probability of about 0.9,
         # irrespectively of the number of operators
-        self.scale = (
-            0.123184457025228 * np.log(float(len(self.scores)))
-            + 0.163017205688887
+        self.scale: float = (
+            0.123184457025228 * np.log(float(len(self.scores))) + 0.163017205688887
         )
-        self.min_probability = 0.1 / len(self.scores)
+        self.min_probability: float = 0.1 / len(self.scores)
 
-    def increase_score_last_operator(self):
+    def increase_score_last_operator(self) -> None:
         """Increase the score of the last operator.
 
         :raise OptimizationError: if the operator is not known.
@@ -65,7 +68,7 @@ class OperatorsManagement:
 
         self.scores[self.last_operator_name] += 1
 
-    def decrease_score_last_operator(self):
+    def decrease_score_last_operator(self) -> None:
         """Decrease the score of the last operator. If it has already the minimum
         score, it increases the others.
 
@@ -76,7 +79,7 @@ class OperatorsManagement:
 
         self.scores[self.last_operator_name] -= 1
 
-    def probability_from_scores(self):
+    def probability_from_scores(self) -> np.ndarray | None:
         """Calculates the probability from the scores
 
         :return: list of probabilities
@@ -96,10 +99,10 @@ class OperatorsManagement:
                 f'Maximum is {1.0 / len(self.scores):.3f}.'
             )
 
-        maxscore = max(list(self.scores.values()))
+        max_score = max(list(self.scores.values()))
         list_of_scores = np.array(
             [
-                np.exp(self.scale * (s - maxscore)) if self.available[k] else 0
+                np.exp(self.scale * (s - max_score)) if self.available[k] else 0
                 for k, s in self.scores.items()
             ]
         )
@@ -110,11 +113,13 @@ class OperatorsManagement:
         return self.enforce_minimum_probability(prob, self.min_probability)
 
     @staticmethod
-    def enforce_minimum_probability(prob, min_probability):
+    def enforce_minimum_probability(
+        prob: np.ndarray, min_probability: float
+    ) -> np.ndarray:
         """
         :param prob: vector of probabilities
         :type prob: numpy.array
-        
+
         :param min_probability: minimum probability to select any
                                operator. This is meant to avoid
                                degeneracy, that is to have operators
@@ -143,8 +148,8 @@ class OperatorsManagement:
             )
             raise OptimizationError(error_msg)
         too_low = prob < min_probability
-        notzero = prob != 0.0
-        update = too_low & notzero
+        not_zero = prob != 0.0
+        update = too_low & not_zero
         reserved_total = update.sum() * min_probability
         if reserved_total >= 1.0:
             error_msg = (
@@ -160,7 +165,7 @@ class OperatorsManagement:
         prob[update] = min_probability
         return prob
 
-    def select_operator(self):
+    def select_operator(self) -> Operator:
         """Select an operator based on the scores
 
         :return: name of the selected operator
@@ -177,11 +182,11 @@ class Neighborhood(metaclass=abc.ABCMeta):
     Abstract class defining a problem
     """
 
-    def __init__(self, operators):
+    def __init__(self, operators: dict[str, Operator]):
         self.operators_management = OperatorsManagement(operators)
 
     @abc.abstractmethod
-    def is_valid(self, element):
+    def is_valid(self, element: SetElement) -> tuple[bool, str]:
         """Check the validity of the solution.
 
         :param element: solution to be checked
@@ -194,8 +199,10 @@ class Neighborhood(metaclass=abc.ABCMeta):
         """
 
     @final
-    def generate_neighbor(self, element, neighborhood_size, attempts=5):
-        """Generate a neighbor from the negihborhood of size
+    def generate_neighbor(
+        self, element: SetElement, neighborhood_size: int, attempts: int = 5
+    ) -> OperatorOutput:
+        """Generate a neighbor from the neighborhood of size
         ``neighborhood_size`` using one of the operators
 
         :param element: current solution
@@ -205,10 +212,9 @@ class Neighborhood(metaclass=abc.ABCMeta):
         :type neighborhood_size: int
 
         :param attempts: number of attempts until we give up
-        :type attemps: int
+        :type attempts: int
 
-        :return: number of modifications actually made
-        :rtype: int
+        :return: the neighbor, and the number of modifications actually made
 
         """
         # Select one operator.
@@ -219,26 +225,16 @@ class Neighborhood(metaclass=abc.ABCMeta):
                 return neighbor, number_of_changes
         return element, 0
 
-    def last_neighbor_rejected(self):
+    def last_neighbor_rejected(self) -> None:
         """Notify that a neighbor has been rejected by the
         algorithm. Used to update the statistics on the operators.
 
-        :param solution: solution  modified
-        :type solution: :class:`biogeme.pareto.SetElement`
-
-        :param a_neighbor: neighbor
-        :type a_neighbor: :class:`biogeme.pareto.SetElement`
         """
         self.operators_management.decrease_score_last_operator()
 
-    def last_neighbor_accepted(self):
+    def last_neighbor_accepted(self) -> None:
         """Notify that a neighbor has been accepted by the
         algorithm. Used to update the statistics on the operators.
 
-        :param solution: solution modified
-        :type solution: :class:`biogeme.pareto.SetElement`
-
-        :param a_neighbor: neighbor
-        :type a_neighbor: :class:`biogeme.pareto.SetElement`
         """
         self.operators_management.increase_score_last_operator()

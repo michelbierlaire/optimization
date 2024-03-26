@@ -3,14 +3,17 @@
 :author: Michel Bierlaire
 :date: Sun Jul  2 15:34:16 2023
 
-Class for the hybrid function calculation, that mixed analtical hessian and BFGS updates
+Class for the hybrid function calculation, that mixed analytical hessian and BFGS updates
 """
+
 import logging
 import numpy as np
-from biogeme_optimization.function import FunctionData
+
+from biogeme_optimization.bounds import Bounds
+from biogeme_optimization.function import FunctionData, FunctionToMinimize
 from biogeme_optimization.bfgs import bfgs
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class HybridFunction:
@@ -20,7 +23,12 @@ class HybridFunction:
 
     """
 
-    def __init__(self, the_function, proportion_analytical_hessian, bounds):
+    def __init__(
+        self,
+        the_function: FunctionToMinimize,
+        proportion_analytical_hessian: float,
+        bounds: Bounds,
+    ) -> None:
         """Constructor
 
         :param the_function: object to calculate the objective
@@ -40,17 +48,17 @@ class HybridFunction:
         :type bounds: Bounds
 
         """
-        self.the_function = the_function
-        self.proportion = proportion_analytical_hessian
-        self.bounds = bounds
-        self.number_of_analytical_hessians = 0
-        self.number_of_matrices = 0
-        self.number_of_numerical_issues = 0
-        self.previous_x = None
-        self.previous_gradient = None
-        self.previous_hessian = None
+        self.the_function: FunctionToMinimize = the_function
+        self.proportion: float = proportion_analytical_hessian
+        self.bounds: Bounds = bounds
+        self.number_of_analytical_hessians: int = 0
+        self.number_of_matrices: int = 0
+        self.number_of_numerical_issues: int = 0
+        self.previous_x: np.ndarray | None = None
+        self.previous_gradient: np.ndarray | None = None
+        self.previous_hessian: np.ndarray | None = None
 
-    def can_calculate_analytical(self):
+    def can_calculate_analytical(self) -> bool:
         """Determines if the analytical hessian can be calculated or not"""
 
         if self.proportion == 0:
@@ -64,8 +72,8 @@ class HybridFunction:
             <= self.proportion
         )
 
-    def calculate_function(self, iterate):
-        """Calculates the value of the function
+    def calculate_function(self, iterate: np.ndarray) -> float:
+        """Calculates the canonical_value of the function
 
         :param iterate: values
         :type iterate: numpy.array
@@ -73,7 +81,9 @@ class HybridFunction:
         self.the_function.set_variables(iterate)
         return self.the_function.f()
 
-    def calculate_function_and_derivatives(self, iterate):
+    def calculate_function_and_derivatives(
+        self, iterate: np.ndarray
+    ) -> FunctionData | None:
         """Calculates the function, its gradient, and the hessian, or its approximation
 
         :param iterate: values
@@ -90,7 +100,9 @@ class HybridFunction:
         self.previous_hessian = function_data.hessian
         return function_data
 
-    def _calculate_function_and_derivatives_bfgs(self, iterate):
+    def _calculate_function_and_derivatives_bfgs(
+        self, iterate: np.ndarray
+    ) -> FunctionData | None:
         """Calculates the function, its gradient, and the BFGS
             approximation of the hessian
 
@@ -120,7 +132,9 @@ class HybridFunction:
         )
         return final_function_data
 
-    def _calculate_function_and_derivatives_analytical(self, iterate):
+    def _calculate_function_and_derivatives_analytical(
+        self, iterate: np.ndarray
+    ) -> FunctionData | None:
         """Calculates the function, its gradient, and the hessian
 
         :param iterate: values

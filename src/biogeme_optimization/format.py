@@ -5,10 +5,15 @@
 
 Object that formats the information of each iteration
 """
-from collections import namedtuple
+
+from typing import NamedTuple
+
 import numpy as np
 
-Column = namedtuple('Column', ['title', 'width'])
+
+class Column(NamedTuple):
+    title: str
+    width: int
 
 
 class FormattedColumns:
@@ -16,11 +21,11 @@ class FormattedColumns:
     Class for formatting the output of iterations
     """
 
-    def __init__(self, columns):
+    def __init__(self, columns: list[Column]) -> None:
         """
         Initialize a FormattedColumns object.
 
-        :param columns: List of Column namedtuples representing the columns.
+        :param columns: List of Column  representing the columns.
         :type columns: list[Column]
         :raises ValueError: If the length of a column title exceeds the specified width.
         """
@@ -44,7 +49,7 @@ class FormattedColumns:
         """
         return ' '.join(col.title.rjust(col.width) for col in self.columns)
 
-    def formatted_row(self, values) -> str:
+    def formatted_row(self, values: list[str | float | int]) -> str:
         """
         Generate a formatted row based on the given values.
 
@@ -66,20 +71,20 @@ class FormattedColumns:
         )
 
     @staticmethod
-    def _format_value(column: Column, value) -> str:
+    def _format_value(column: Column, value: str | float | int) -> str:
         """
-        Format a value based on the column type.
+        Format a canonical_value based on the column type.
 
-        :param column: The column for the value.
+        :param column: The column for the canonical_value.
         :type column: Column
 
-        :param value: The value to be formatted.
+        :param value: The canonical_value to be formatted.
         :type value: str, int, float
 
-        :return: The formatted value.
+        :return: The formatted canonical_value.
         :rtype: str
 
-        :raises ValueError: If the value has an unsupported type.
+        :raises ValueError: If the canonical_value has an unsupported type.
         """
         if isinstance(value, str):
             return value.rjust(column.width)
@@ -90,4 +95,6 @@ class FormattedColumns:
         if isinstance(value, int) or isinstance(value, np.integer):
             return f'{value:{column.width}d}'
 
-        raise ValueError(f'Invalid column type: {type(value)} for value {value}')
+        raise ValueError(
+            f'Invalid column type: {type(value)} for canonical_value {value}'
+        )

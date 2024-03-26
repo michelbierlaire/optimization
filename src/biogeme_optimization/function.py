@@ -5,17 +5,26 @@
 
 Abstract class for the function to minimize
 """
+
 import logging
 from abc import ABC, abstractmethod
-from typing import final
-from collections import namedtuple
+from typing import final, NamedTuple
+
 import numpy as np
 
-FunctionData = namedtuple('FunctionData', ['function', 'gradient', 'hessian'])
+from biogeme_optimization.bounds import Bounds
 
-logger = logging.getLogger(__name__)
 
-SQRT_EPSILON = np.sqrt(np.finfo(np.float64).eps)
+class FunctionData(NamedTuple):
+    function: float | None
+    gradient: np.ndarray | None
+    hessian: np.ndarray | None
+
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+SQRT_EPSILON: float = np.sqrt(np.finfo(np.float64).eps)
+
 
 class FunctionToMinimize(ABC):
     """This is an abstract class. The actual function to minimize
@@ -23,7 +32,11 @@ class FunctionToMinimize(ABC):
 
     """
 
-    def __init__(self, epsilon=None, steptol=None):
+    def __init__(
+        self,
+        epsilon: float | None = None,
+        steptol: float | None = None,
+    ) -> None:
         """Constructor
         :param epsilon: tolerance on the relative gradient for convergence
         :type epsilon: float
@@ -41,20 +54,20 @@ class FunctionToMinimize(ABC):
         self.reset()
 
     @final
-    def reset(self):
+    def reset(self) -> None:
         """Erase all stored values"""
-        self.stored_values = {}
-        self.stored_gradient = {}
-        self.stored_hessian = {}
-        self.x = None
-        self.x_bytes = None
-        self.typx = None
-        self.typf = None
-        self.relgrad = None
-        self.messages = {}
+        self.stored_values: dict[bytes, float] = {}
+        self.stored_gradient: dict[bytes, FunctionData] = {}
+        self.stored_hessian: dict[bytes, FunctionData] = {}
+        self.x: np.ndarray | None = None
+        self.x_bytes: bytes | None = None
+        self.typx: np.ndarray | None = None
+        self.typf: float | None = None
+        self.relative_gradient_norm: float | None = None
+        self.messages: dict[str, str | float | int] = {}
 
     @final
-    def needs_reset(self):
+    def needs_reset(self) -> bool:
         """Checks if the function needs to be reset
 
         :return: True if calculated values of the function are stored
@@ -63,17 +76,14 @@ class FunctionToMinimize(ABC):
         return bool(self.stored_values)
 
     @abstractmethod
-    def dimension(self):
-        """Provides the number of variables of the problem"""
+    def dimension(self) -> int:
+        """Provides the number of unsorted_set_of_variables of the problem"""
 
-    def calculate_relative_projected_gradient(self, bounds=None):
+    def calculate_relative_projected_gradient(self, bounds: Bounds = None) -> None:
         """Calculates the relative projected gradient
 
         :param bounds: object describing the bound constraints
         :type bounds: Bounds
-
-        :return: True is optimal, False otherwise
-        :rtype: bool
 
         """
         evaluation = self.f_g()
@@ -88,11 +98,11 @@ class FunctionToMinimize(ABC):
             self.typx = np.ones(np.asarray(self.x).shape)
         if self.typf is None:
             self.typf = max(np.abs(evaluation.function), 1.0)
-        self.relgrad = relative_gradient(
+        self.relative_gradient_norm = relative_gradient(
             self.x, value_function, projected_gradient, self.typx, self.typf
         )
 
-    def check_optimality(self, bounds=None):
+    def check_optimality(self, bounds: Bounds = None) -> bool:
         """Verifies the optimality of the current iterate
 
         :param bounds: object describing the bound constraints
@@ -103,23 +113,23 @@ class FunctionToMinimize(ABC):
 
         """
         self.calculate_relative_projected_gradient(bounds)
-        if self.relgrad <= self.epsilon:
-            message = f'Relative gradient = {self.relgrad:.2g} <= {self.epsilon:.2g}'
-            self.messages['Relative gradient'] = self.relgrad
+        if self.relative_gradient_norm <= self.epsilon:
+            message = f'Relative gradient = {self.relative_gradient_norm:.2g} <= {self.epsilon:.2g}'
+            self.messages['Relative gradient'] = self.relative_gradient_norm
             self.messages['Cause of termination'] = message
-            self.messages[
-                'Number of function evaluations'
-            ] = self.nbr_function_evaluations()
-            self.messages[
-                'Number of gradient evaluations'
-            ] = self.nbr_gradient_evaluations()
-            self.messages[
-                'Number of hessian evaluations'
-            ] = self.nbr_hessian_evaluations()
+            self.messages['Number of function evaluations'] = (
+                self.nbr_function_evaluations()
+            )
+            self.messages['Number of gradient evaluations'] = (
+                self.nbr_gradient_evaluations()
+            )
+            self.messages['Number of hessian evaluations'] = (
+                self.nbr_hessian_evaluations()
+            )
             return True
         return False
 
-    def check_insufficient_progress(self, previous_iterate):
+    def check_insufficient_progress(self, previous_iterate: np.ndarray) -> bool:
         """Verifies if the algorithm is making sufficient progress. If
             not, the algorithm is stopped
 
@@ -136,21 +146,21 @@ class FunctionToMinimize(ABC):
         if change <= self.steptol:
             message = f'Relative change = ' f'{change:.3g} <= {self.steptol:.2g}'
             self.messages['Cause of termination'] = message
-            self.messages[
-                'Number of function evaluations'
-            ] = self.nbr_function_evaluations()
-            self.messages[
-                'Number of gradient evaluations'
-            ] = self.nbr_gradient_evaluations()
-            self.messages[
-                'Number of hessian evaluations'
-            ] = self.nbr_hessian_evaluations()
+            self.messages['Number of function evaluations'] = (
+                self.nbr_function_evaluations()
+            )
+            self.messages['Number of gradient evaluations'] = (
+                self.nbr_gradient_evaluations()
+            )
+            self.messages['Number of hessian evaluations'] = (
+                self.nbr_hessian_evaluations()
+            )
             return True
         return False
 
     @final
-    def set_variables(self, x):
-        """Set the values of the variables for which the function
+    def set_variables(self, x: np.ndarray) -> None:
+        """Set the values of the unsorted_set_of_variables for which the function
         has to be calculated.
 
         :param x: values
@@ -160,33 +170,31 @@ class FunctionToMinimize(ABC):
         self.x_bytes = x.tobytes()
 
     @final
-    def f(self):
-        """Retrieve or calculate the value of the function
+    def f(self) -> float:
+        """Retrieve or calculate the canonical_value of the function
 
-        :return: value of the function
+        :return: canonical_value of the function
         :rtype: float
         """
         value = self.stored_values.get(self.x_bytes)
-        value = None
         if value is None:
             value = self._f()
             self.stored_values[self.x_bytes] = value
         return value
 
     @abstractmethod
-    def _f(self):
+    def _f(self) -> float:
+        """Calculate the canonical_value of the function
 
-        """Calculate the value of the function
-
-        :return: value of the function
+        :return: canonical_value of the function
         :rtype: float
         """
 
     @final
-    def f_g(self):
-        """Retrieve or calculate the value of the function and the gradient
+    def f_g(self) -> FunctionData:
+        """Retrieve or calculate the canonical_value of the function and the gradient
 
-        :return: value of the function and the gradient
+        :return: canonical_value of the function and the gradient
         :rtype: FunctionData
         """
         function_data = self.stored_gradient.get(self.x_bytes)
@@ -197,18 +205,18 @@ class FunctionToMinimize(ABC):
         return function_data
 
     @abstractmethod
-    def _f_g(self):
-        """Calculate the value of the function and the gradient
+    def _f_g(self) -> FunctionData:
+        """Calculate the canonical_value of the function and the gradient
 
-        :return: value of the function and the gradient
+        :return: canonical_value of the function and the gradient
         :rtype: FunctionData
         """
 
     @final
-    def f_g_h(self):
-        """Calculate the value of the function, the gradient and the Hessian
+    def f_g_h(self) -> FunctionData:
+        """Calculate the canonical_value of the function, the gradient and the Hessian
 
-        :return: value of the function, the gradient and the Hessian
+        :return: canonical_value of the function, the gradient and the Hessian
         :rtype: FunctionData
         """
         function_data = self.stored_hessian.get(self.x_bytes)
@@ -220,29 +228,29 @@ class FunctionToMinimize(ABC):
         return function_data
 
     @abstractmethod
-    def _f_g_h(self):
-        """Calculate the value of the function, the gradient and the Hessian
+    def _f_g_h(self) -> FunctionData:
+        """Calculate the canonical_value of the function, the gradient and the Hessian
 
-        :return: value of the function, the gradient and the Hessian
+        :return: canonical_value of the function, the gradient and the Hessian
         :rtype: FunctionData
         """
 
     @final
-    def nbr_function_evaluations(self):
+    def nbr_function_evaluations(self) -> int:
         """Obtain the total number of function evaluations"""
         return len(self.stored_values)
 
     @final
-    def nbr_gradient_evaluations(self):
+    def nbr_gradient_evaluations(self) -> int:
         """Obtain the total number of gradient evaluations"""
         return len(self.stored_gradient)
 
     @final
-    def nbr_hessian_evaluations(self):
+    def nbr_hessian_evaluations(self) -> int:
         """Obtain the total number of hessian evaluations"""
         return len(self.stored_hessian)
 
-    def finite_differences_gradient(self, x):
+    def finite_differences_gradient(self, x: np.ndarray) -> np.ndarray:
         """Calculates the gradient of the function using finite differences
 
         :param x: argument of the function
@@ -274,7 +282,7 @@ class FunctionToMinimize(ABC):
             g[i] = (fp - f) / s
         return g.astype(float)
 
-    def finite_differences_hessian(self, x):
+    def finite_differences_hessian(self, x: np.ndarray) -> np.ndarray:
         """Calculates the hessian of the function using finite differences
 
         :param x: argument of the function
@@ -307,7 +315,9 @@ class FunctionToMinimize(ABC):
             hessian[:, i] = (gp - g) / s
         return hessian.astype(float)
 
-    def check_derivatives(self, x, names=None):
+    def check_derivatives(
+        self, x: np.ndarray, names: list[str] | None = None
+    ) -> tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Verifies the analytical derivatives of a function by comparing
         them with finite difference approximations.
 
@@ -319,7 +329,7 @@ class FunctionToMinimize(ABC):
 
         :return: tuple f, g, h, gdiff, hdiff where
 
-          - f is the value of the function at x,
+          - f is the canonical_value of the function at x,
           - g is the analytical gradient,
           - h is the analytical hessian,
           - gdiff is the difference between the analytical gradient
@@ -356,20 +366,22 @@ class FunctionToMinimize(ABC):
         return f, g, h, gdiff, hdiff
 
 
-def relative_gradient(x, f, g, typx, typf):
+def relative_gradient(
+    x: np.ndarray, f: float, g: np.ndarray, typx: np.ndarray, typf: float
+) -> float:
     """Calculates the relative gradients.
 
     It is typically used as stopping criterion.
 
     :param x: current iterate.
     :type x: numpy.array
-    :param f: value of f(x)
+    :param f: canonical_value of f(x)
     :type f: float
     :param g: :math:`\\nabla f(x)`, gradient of f at x
     :type g: numpy.array
-    :param typx: typical value for x.
+    :param typx: typical canonical_value for x.
     :type typx: numpy.array
-    :param typf: typical value for f.
+    :param typf: typical canonical_value for f.
     :type typf: float
 
     :return: relative gradient
@@ -389,10 +401,10 @@ def relative_gradient(x, f, g, typx, typf):
     if np.isfinite(result):
         return result
 
-    return np.finfo(float).max
+    return float(np.finfo(float).max)
 
 
-def relative_change(x, xpred, typx):
+def relative_change(x: np.ndarray, x_previous: np.ndarray, typx: np.ndarray) -> float:
     """Calculates the relative change.
 
     It is typically used as stopping criterion.
@@ -400,10 +412,10 @@ def relative_change(x, xpred, typx):
     :param x: current iterate.
     :type x: numpy.array
 
-    :param xpred: previous iterate.
-    :type xpred: numpy.array
+    :param x_previous: previous iterate.
+    :type x_previous: numpy.array
 
-    :param typx: typical value for x.
+    :param typx: typical canonical_value for x.
     :type typx: numpy.array
 
     :return: relative change:
@@ -416,10 +428,13 @@ def relative_change(x, xpred, typx):
     """
 
     relx = np.array(
-        [abs(x[i] - xpred[i]) / max(abs(x[i]), typx[i]) for i in range(len(x))]
+        [
+            abs(x[i] - x_previous[i]) / np.maximum(abs(x[i]), typx[i])
+            for i in range(len(x))
+        ]
     )
     result = relx.max()
     if np.isfinite(result):
         return result
 
-    return np.finfo(float).max
+    return float(np.finfo(float).max)

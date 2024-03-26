@@ -5,18 +5,19 @@
 
 Class in charge of the management of bound constraints
 """
+
+from __future__ import annotations
 import logging
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.diagnostics import ConjugateGradientDiagnostic
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def inner_product_subspace(
     vector_a: np.ndarray, vector_b: np.ndarray, subspace_indices
 ) -> float:
-
     """Given two input vectors `vector_a` and `vector_b`, this
     function calculates the inner product of the entries in `vector_a`
     and `vector_b` that correspond to the provided `subspace_indices`.
@@ -102,7 +103,8 @@ class Bounds:
     """This class is designed for the management of simple bound constraints."""
 
     INFINITY = np.sqrt(np.finfo(float).max)
-    def __init__(self, bounds):
+
+    def __init__(self, bounds: list[tuple[float | None, float | None]]):
         """Constructor.
 
         :param bounds: list of tuples (ell,u) containing the lower and
@@ -114,13 +116,13 @@ class Bounds:
 
         """
 
-        def none_to_minus_infinity(value):
-            """Returns -infinity if the input is None, otherwise returns the input value
+        def none_to_minus_infinity(value: float) -> float:
+            """Returns -infinity if the input is None, otherwise returns the input canonical_value
 
-            :param value: The input value.
+            :param value: The input canonical_value.
             :type value: float
 
-            :return: The modified value. If x is None, returns
+            :return: The modified canonical_value. If x is None, returns
                 -infinity; otherwise, returns x.
             :rtype: float
 
@@ -130,14 +132,14 @@ class Bounds:
 
             return value
 
-        def none_to_plus_infinity(value):
+        def none_to_plus_infinity(value: float) -> float:
             """Returns +infinity if the input is None, otherwise
-                returns the input value.
+                returns the input canonical_value.
 
-            :param value: The input value.
+            :param value: The input canonical_value.
             :type value: float
 
-            :return: The modified value. If x is None, returns
+            :return: The modified canonical_value. If x is None, returns
                 +infinity; otherwise, returns x.
             :rtype: float
 
@@ -152,7 +154,9 @@ class Bounds:
             each free parameter.
         """
 
-        self.dimension = len(bounds)  #: number of optimization variables
+        self.dimension = len(
+            bounds
+        )  #: number of optimization unsorted_set_of_variables
 
         self.lower_bounds = np.array(
             [none_to_minus_infinity(bound[0]) for bound in bounds]
@@ -180,7 +184,7 @@ class Bounds:
             raise OptimizationError(error_msg)
 
     @classmethod
-    def from_bounds(cls, lower, upper):
+    def from_bounds(cls, lower: np.ndarray, upper: np.ndarray) -> Bounds:
         """Ctor using two vectors of bounds
 
         :param lower: vector of lower bounds
@@ -197,14 +201,14 @@ class Bounds:
         list_of_tuples = list(zip(lower, upper))
         return cls(list_of_tuples)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Magic string."""
         return self.bounds.__str__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.bounds.__repr__()
 
-    def project(self, point):
+    def project(self, point: np.ndarray) -> np.ndarray:
         """Project a point onto the feasible domain defined by the bounds.
 
         :param point: point to project
@@ -225,7 +229,7 @@ class Bounds:
         new_point = np.clip(point, self.lower_bounds, self.upper_bounds)
         return new_point
 
-    def intersect(self, other_bounds):
+    def intersect(self, other_bounds: Bounds) -> Bounds:
         """
         Create a bounds object representing the intersection of two regions.
 
@@ -258,7 +262,9 @@ class Bounds:
         result = Bounds(new_bounds)
         return result
 
-    def intersection_with_trust_region(self, point, radius):
+    def intersection_with_trust_region(
+        self, point: np.ndarray, radius: float
+    ) -> Bounds:
         """Create a Bounds object representing the intersection
             between the bounds and the trust region:
              point-radius <= x <= point+radius
@@ -283,9 +289,11 @@ class Bounds:
         trust_region = Bounds.from_bounds(point - radius, point + radius)
         return self.intersect(trust_region)
 
-    def get_bounds_for_trust_region_subproblem(self, point, radius):
+    def get_bounds_for_trust_region_subproblem(
+        self, point: np.ndarray, radius: float
+    ) -> Bounds:
         """Create a Bounds object representing the bounds on the step
-            for the trust region subproblem. It is the intersection between:
+            for the trust region sub-problem. It is the intersection between:
               -radius <= d <= radius
             and
               ell-point <= d <= u-point
@@ -293,10 +301,10 @@ class Bounds:
         :param point: center of the trust region
         :type point: numpy.array
 
-        :param radius: radius of the tust region (infinity norm)
+        :param radius: radius of the trust region (infinity norm)
         :type radius: float
 
-        :return: intersection between the feasible region and the trus region
+        :return: intersection between the feasible region and the trust region
         :rtype: class Bounds
 
         :raises OptimizationError: if the dimensions are inconsistent
@@ -315,11 +323,11 @@ class Bounds:
         )
         return shifted_bounds.intersect(trust_region)
 
-    def subspace(self, selected_variables):
-        """Generate a Bounds object for selected variables
+    def subspace(self, selected_variables: np.ndarray) -> Bounds:
+        """Generate a Bounds object for selected unsorted_set_of_variables
 
         :param selected_variables: boolean vector. If an entry is True,
-                   the corresponding variables is considered.
+                   the corresponding unsorted_set_of_variables is considered.
         :type selected_variables: numpy.array(bool)
 
         :return: bound object
@@ -340,7 +348,7 @@ class Bounds:
         ]
         return Bounds(selected_bounds)
 
-    def feasible(self, point):
+    def feasible(self, point: np.ndarray) -> bool:
         """Check if point verifies the bound constraints
 
         :param point: point to project
@@ -362,7 +370,9 @@ class Bounds:
             return False
         return True
 
-    def maximum_step(self, point, direction):
+    def maximum_step(
+        self, point: np.ndarray, direction: np.ndarray
+    ) -> tuple[float, np.ndarray]:
         """Calculates the maximum step that can be performed
         along a direction while staying feasible.
 
@@ -373,7 +383,7 @@ class Bounds:
         :type direction: numpy.array
 
         :return: the largest alpha such that point + alpha * direction is feasible
-                 and the list of indices achieving this value.
+                 and the list of indices achieving this canonical_value.
         :rtype: float, int
 
         :raises biogeme.exceptions.OptimizationError: if the point is infeasible
@@ -383,8 +393,13 @@ class Bounds:
         if not self.feasible(point):
             raise OptimizationError(f'Infeasible point: {point}')
 
-        def calculate_alpha(point_element, lower, upper, direction_element):
-            """Calculate the value of alpha on numpy arrays"""
+        def calculate_alpha(
+            point_element: np.ndarray,
+            lower: np.ndarray,
+            upper: np.ndarray,
+            direction_element: np.ndarray,
+        ) -> np.ndarray:
+            """Calculate the canonical_value of alpha on numpy arrays"""
             result = np.empty_like(point_element, dtype=float)
 
             upper_bound_exists = upper != np.inf
@@ -422,39 +437,21 @@ class Bounds:
             result[mask5] = np.inf
 
             return result
-            """
-            result = np.where(
-                direction_element > np.finfo(float).eps,
-                np.where(
-                    upper == np.inf,
-                    np.inf,
-                    (upper - point_element) / direction_element,
-                ),
-                np.where(
-                    direction_element < -np.finfo(float).eps,
-                    np.where(
-                        lower == -np.inf,
-                        np.inf,
-                        (lower - point_element) / direction_element,
-                    ),
-                    np.inf,
-                ),
-            )
-            return result
-            """
 
         alpha = calculate_alpha(point, self.lower_bounds, self.upper_bounds, direction)
         the_minimum = np.amin(alpha)
         return the_minimum, np.where(alpha == the_minimum)[0]
 
-    def activity(self, point, epsilon=np.finfo(float).eps):
+    def activity(
+        self, point: np.ndarray, epsilon: float = np.finfo(float).eps
+    ) -> np.ndarray:
         """Determines the activity status of each variable.
 
         :param point: point for which the activity must be determined.
         :type point: numpy.array
 
         :param epsilon: a bound is considered active if the distance
-                        to it is less rhan epsilon.
+                        to it is less than epsilon.
         :type epsilon: float
 
         :return: a vector, same length as point, where each entry reports
@@ -495,18 +492,20 @@ class Bounds:
 
         return activity_status
 
-    def active_constraints(self, point, epsilon=np.finfo(float).eps):
+    def active_constraints(
+        self, point: np.ndarray, epsilon: float = np.finfo(float).eps
+    ) -> set[int]:
         """Determines the indices of active constraints for a given point.
 
         :param point: The point for which to determine the active constraints.
         :type point: numpy.array
 
         :param epsilon: The tolerance used to determine the activity
-            status of constraints.  A constraint is considered active
+            status of constraints.  the_matrix constraint is considered active
             if the distance to it is less than epsilon.
         :type epsilon: float, optional
 
-        :return: A set containing the indices of active constraints.
+        :return: the_matrix set containing the indices of active constraints.
         :rtype: set
 
         :raises biogeme.exceptions.OptimizationError: If the
@@ -518,18 +517,20 @@ class Bounds:
         activity_status = self.activity(point, epsilon)
         return {i for i, status in enumerate(activity_status) if status != 0}
 
-    def inactive_constraints(self, point, epsilon=np.finfo(float).eps):
+    def inactive_constraints(
+        self, point: np.ndarray, epsilon: float = np.finfo(float).eps
+    ) -> set[int]:
         """Determines the indices of inactive constraints for a given point.
 
         :param point: The point for which to determine the active constraints.
         :type point: numpy.array
 
         :param epsilon: The tolerance used to determine the activity
-            status of constraints.  A constraint is considered active
+            status of constraints.  the_matrix constraint is considered active
             if the distance to it is less than epsilon.
         :type epsilon: float, optional
 
-        :return: A set containing the indices of inactive constraints.
+        :return: the_matrix set containing the indices of inactive constraints.
         :rtype: set
 
         :raises biogeme.exceptions.OptimizationError: If the
@@ -542,7 +543,9 @@ class Bounds:
         activity_status = self.activity(point, epsilon)
         return {i for i, status in enumerate(activity_status) if status == 0}
 
-    def breakpoints(self, point, direction):
+    def breakpoints(
+        self, point: np.ndarray, direction: np.ndarray
+    ) -> list[tuple[int, float]]:
         """Projects the direction direction, starting from point,
         on the intersection of the bound constraints
 
@@ -552,8 +555,8 @@ class Bounds:
         :param direction: search direction
         :type direction: numpy.array
 
-        :return: list of tuple (index, value), where index is the index
-                 of the variable, and value the value of the corresponding
+        :return: list of tuple (index, canonical_value), where index is the index
+                 of the variable, and canonical_value the canonical_value of the corresponding
                  breakpoint.
         :rtype: list(tuple(int,float))
 
@@ -591,9 +594,11 @@ class Bounds:
         if not break_points:
             raise OptimizationError("Infeasible point")
 
-        return sorted(break_points, key=lambda point: point[1])
+        return sorted(break_points, key=lambda the_point: the_point[1])
 
-    def projected_direction(self, x_current, direction):
+    def projected_direction(
+        self, x_current: np.ndarray, direction: np.ndarray
+    ) -> np.ndarray:
         """Calculates the projected direction.
 
         Given the current point x_current and the direction,
@@ -623,7 +628,9 @@ class Bounds:
 
         return projected_direction
 
-    def generalized_cauchy_point(self, x_current, g_current, h_current):
+    def generalized_cauchy_point(
+        self, x_current: np.ndarray, g_current: np.ndarray, h_current: np.ndarray
+    ) -> np.ndarray:
         """Implementation of Step 2 of the Specific Algorithm by
         `Conn et al. (1988)`_.
 
@@ -672,7 +679,6 @@ class Bounds:
                 '[LB: {self.lower_bounds} UB: {self.upper_bounds}]'
             )
 
-
         x = x_current
         g = g_current - h_current @ x_current
         direction = self.projected_direction(x_current, -g_current)
@@ -686,17 +692,17 @@ class Bounds:
             else:
                 logger.warning('GCP: not a descent direction.')
 
-        fsecond = np.inner(direction, h_current @ direction)
+        f_second = np.inner(direction, h_current @ direction)
 
-        J = set()
+        set_active_constraints = set()
 
-        while len(J) < self.dimension:
+        while len(set_active_constraints) < self.dimension:
             # Calculate the maximum step that can be done in the current direction
             delta_t, _ = self.maximum_step(x, direction)
             # Test whether the GCP has been found
-            ratio = -fprime / fsecond
+            ratio = -fprime / f_second
 
-            if fsecond > 0 and 0 < ratio < delta_t:
+            if f_second > 0 and 0 < ratio < delta_t:
                 x = x + ratio * direction
                 return x
 
@@ -709,11 +715,11 @@ class Bounds:
             # Note that there may be more than one variable activated
             # at x_plus. Therefore, we recalculate the activity
             # status.
-            J_plus = self.active_constraints(x_plus)
-            activated = J_plus - J
+            set_active_constraints_plus = self.active_constraints(x_plus)
+            activated = set_active_constraints_plus - set_active_constraints
 
             x = x_plus
-            J = J_plus
+            set_active_constraints = set_active_constraints_plus
 
             # Update line derivatives
             bd = np.zeros_like(direction)
@@ -721,16 +727,18 @@ class Bounds:
             b = h_current @ bd
 
             d_dot_g = np.sum([direction[i] * g[i] for i in activated])
-            fprime += delta_t * fsecond - np.inner(b, x) - d_dot_g
-            fsecond += np.inner(b, bd - 2 * direction)
+            fprime += delta_t * f_second - np.inner(b, x) - d_dot_g
+            f_second += np.inner(b, bd - 2 * direction)
             direction[list(activated)] = 0.0
             if np.all(direction == 0) or fprime >= 0:
                 return x
 
         return x
 
-    def truncated_conjugate_gradient(self, gradient, hessian, tol=1.0e-6):
-        """Find an approximation of the trust region subproblem using
+    def truncated_conjugate_gradient(
+        self, gradient: np.ndarray, hessian: np.ndarray, tol: float = 1.0e-6
+    ) -> tuple[np.ndarray, ConjugateGradientDiagnostic]:
+        """Find an approximation of the trust region sub-problem using
             the truncated conjugate gradient method, where the step d
             mus verify the bound constraints.
 
@@ -745,7 +753,7 @@ class Bounds:
 
         :return: d, diagnostic, where
 
-              - d is the approximate solution of the trust region subproblem,
+              - d is the approximate solution of the trust region sub-problem,
               - diagnostic is the nature of the solution:
 
                 * CONVERGENCE for convergence,
@@ -777,15 +785,15 @@ class Bounds:
                     step = xk
                     return step, diagnostic
 
-                curv = np.inner(dk, hessian @ dk)
-                if curv <= 0:
+                curvature = np.inner(dk, hessian @ dk)
+                if curvature <= 0:
                     # Negative curvature has been detected
                     diagnostic = ConjugateGradientDiagnostic.NEGATIVE_CURVATURE
                     step, _ = self.maximum_step(xk, dk)
                     solution = xk + step * dk
                     return solution, diagnostic
-                alphak = -np.inner(dk, hx_plus_g) / curv
-                xkp1 = xk + alphak * dk
+                alpha_k = -np.inner(dk, hx_plus_g) / curvature
+                xkp1 = xk + alpha_k * dk
                 if np.isnan(xkp1).any() or not self.feasible(xkp1):
                     # Out of the trust region
                     diagnostic = ConjugateGradientDiagnostic.OUT_OF_TRUST_REGION
@@ -794,10 +802,10 @@ class Bounds:
                     return solution, diagnostic
                 xk = xkp1
                 next_hx_plus_g = hessian @ xk + gradient
-                betak = np.inner(next_hx_plus_g, next_hx_plus_g) / np.inner(
+                beta_k = np.inner(next_hx_plus_g, next_hx_plus_g) / np.inner(
                     hx_plus_g, hx_plus_g
                 )
-                dk = -next_hx_plus_g + betak * dk
+                dk = -next_hx_plus_g + beta_k * dk
                 hx_plus_g = next_hx_plus_g
             except ValueError:
                 # Numerical problem. We follow the last direction
@@ -813,15 +821,15 @@ class Bounds:
 
     def truncated_conjugate_gradient_subspace(
         self,
-        iterate,
-        gradient,
-        hessian,
-        radius,
-        tol=np.finfo(np.float64).eps ** 0.3333,
-    ):
+        iterate: np.ndarray,
+        gradient: np.ndarray,
+        hessian: np.ndarray,
+        radius: float,
+        tol: float = np.finfo(np.float64).eps ** 0.3333,
+    ) -> tuple[np.ndarray, ConjugateGradientDiagnostic]:
         """Find an approximation of the solution of the trust region
         subproblem using the truncated conjugate gradient method within
-        the subspace of free variables. Free variables are those
+        the subspace of free unsorted_set_of_variables. Free unsorted_set_of_variables are those
         corresponding to inactive constraints at the generalized Cauchy
         point.
 
@@ -880,10 +888,10 @@ class Bounds:
             iterate, radius
         )
 
-        # We fix the variables active at the GCP
-        activity_status = intersection.activity(gcp)
-        free_variables = activity_status == 0
-        fixed_variables = activity_status != 0
+        # We fix the unsorted_set_of_variables active at the GCP
+        activity_status: np.ndarray = intersection.activity(gcp)
+        free_variables: np.ndarray = activity_status == 0
+        fixed_variables: np.ndarray = activity_status != 0
 
         if not free_variables.any():
             return gcp, ConjugateGradientDiagnostic.CONVERGENCE

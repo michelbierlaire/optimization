@@ -5,6 +5,7 @@
 
 Functions for line search algorithms
 """
+
 from abc import ABC, abstractmethod
 import logging
 import numpy as np
@@ -12,24 +13,24 @@ from biogeme_optimization.diagnostics import OptimizationResults
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.bfgs import inverse_bfgs
 from biogeme_optimization.algebra import schnabel_eskow_direction
+from biogeme_optimization.function import FunctionToMinimize
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class DirectionManagement(ABC):
     """Abstract class for the generation of a descent direction."""
 
-    def __init__(self, function):
+    def __init__(self, function: FunctionToMinimize):
         """Constructor
 
         :param function: the function to minimize
-        :type the_function: FunctionToMinimize
 
         """
         self.the_function = function
 
     @abstractmethod
-    def get_direction(self, iterate):
+    def get_direction(self, iterate: np.ndarray) -> np.ndarray | None:
         """Obtain a descent direction
 
         :param iterate: current iterate
@@ -41,17 +42,11 @@ class DirectionManagement(ABC):
 class NewtonDirection(DirectionManagement):
     """Class for the generation of the Newton direction."""
 
-    def get_direction(self, iterate):
+    def get_direction(self, iterate: np.ndarray) -> np.ndarray | None:
         """Update the data necessary to calculate the direction.
 
         :param iterate: current iterate
         :type iterate: numpy.array (n x 1)
-
-        :param delta_x: difference of the two consecutive iterates
-        :type delta_x: numpy.array (n x 1)
-
-        :param delta_g: difference of the two consecutive gradients
-        :type delta_g: numpy.array (n x 1)
 
         :return: descent direction, or None if the current iterate is optimal
         :rtype: numpy.array (n x 1)
@@ -68,7 +63,11 @@ class NewtonDirection(DirectionManagement):
 class InverseBfgsDirection(DirectionManagement):
     """Class for the generation of the inverse BFGS direction."""
 
-    def __init__(self, function, first_inverse_approximation=None):
+    def __init__(
+        self,
+        function: FunctionToMinimize,
+        first_inverse_approximation: np.ndarray | None = None,
+    ) -> None:
         """Constructor
 
         :param first_inverse_approximation: first inverse approximation of the Hessian
@@ -89,17 +88,13 @@ class InverseBfgsDirection(DirectionManagement):
         self.last_iterate = None
         self.last_gradient = None
 
-    def get_direction(self, iterate):
+    def get_direction(self, iterate: np.ndarray) -> np.ndarray | None:
         """Obtain a descent direction
 
         :param iterate: current iterate
         :type iterate: numpy.array (n x 1)
 
-        :param delta_x: difference of the two consecutive iterates
-        :type delta_x: numpy.array (n x 1)
-
-        :param delta_g: difference of the two consecutive gradients
-        :type delta_g: numpy.array (n x 1)
+        :return: descent direction, or None if the current iterate is optimal.
         """
         self.the_function.set_variables(iterate)
         evaluation = self.the_function.f_g()
@@ -125,16 +120,16 @@ class InverseBfgsDirection(DirectionManagement):
         return direction
 
 
-def linesearch(
-    fct,
-    iterate,
-    descent_direction,
-    alpha0=1.0,
-    beta1=1.0e-4,
-    beta2=0.99,
-    lbd=2.0,
-    maxiter=1000,
-):
+def line_search(
+    fct: FunctionToMinimize,
+    iterate: np.ndarray,
+    descent_direction: np.ndarray,
+    alpha0: float = 1.0,
+    beta1: float = 1.0e-4,
+    beta2: float = 0.99,
+    lbd: float = 2.0,
+    maxiter: int = 1000,
+) -> float:
     """
     Calculate a step along a direction that satisfies both Wolfe conditions
 
@@ -159,7 +154,10 @@ def linesearch(
     :param lbd: expansion factor for a short step.
     :type lbd: float
 
-    :return: a step verifing both Wolfe conditions
+    :param maxiter: the algorithm stops if this number of iterations
+        is reached. Default: 1000
+
+    :return: a step verifying both Wolfe conditions
     :rtype: float
 
     :raises OptimizationError: if ``lbd`` :math:`\\leq` 1
@@ -191,39 +189,38 @@ def linesearch(
         )
 
     alpha = alpha0
-    alphal = 0
-    alphar = np.inf
+    alpha_left = 0
+    alpha_right = np.inf
     for _ in range(maxiter):
         candidate = iterate + alpha * descent_direction
         fct.set_variables(candidate)
         candidate_evaluation = fct.f_g()
         # First Wolfe condition violated?
         if candidate_evaluation.function > evaluation.function + alpha * beta1 * deriv:
-            alphar = alpha
-            alpha = (alphal + alphar) / 2.0
+            alpha_right = alpha
+            alpha = (alpha_left + alpha_right) / 2.0
         # Second Wolfe condition violated?
         elif np.inner(candidate_evaluation.gradient, descent_direction) < beta2 * deriv:
-            alphal = alpha
-            if alphar == np.inf:
-                alpha = lbd * alpha
+            alpha_left = alpha
+            if alpha_right == np.inf:
+                alpha *= lbd
             else:
-                alpha = (alphal + alphar) / 2.0
+                alpha = (alpha_left + alpha_right) / 2.0
         else:
             return alpha
     else:
         raise OptimizationError(
             f'Line search algorithm could not find a step verifying both Wolfe '
-            f'conditions after {MAX_ITERATIONS} iterations.'
+            f'conditions after {maxiter} iterations.'
         )
-    return alpha
 
 
 def minimization_with_line_search(
-    the_function,
-    starting_point,
-    direction_management,
-    maxiter=1000,
-):
+    the_function: FunctionToMinimize,
+    starting_point: np.ndarray,
+    direction_management: DirectionManagement,
+    maxiter: int = 1000,
+) -> OptimizationResults:
     """Minimization method with inexact line search (Wolfe conditions)
 
     :param the_function: function to minimize
@@ -266,15 +263,14 @@ def minimization_with_line_search(
                 convergence=True,
             )
             break
-        evaluation = the_function.f_g()
-        alpha = linesearch(the_function, xk, direction)
+        alpha = line_search(the_function, xk, direction)
         delta = alpha * direction
         xk = xk + delta
     else:
         messages = the_function.messages
-        messages[
-            'Cause of termination'
-        ] = f'Maximum number of iterations reached: {maxiter}'
+        messages['Cause of termination'] = (
+            f'Maximum number of iterations reached: {maxiter}'
+        )
 
         optimization_results = OptimizationResults(
             solution=xk,
@@ -283,7 +279,13 @@ def minimization_with_line_search(
         )
     return optimization_results
 
-def newton_linesearch(*, the_function, starting_point, maxiter=1000):
+
+def newton_line_search(
+    *,
+    the_function: FunctionToMinimize,
+    starting_point: np.ndarray,
+    maxiter: int = 1000,
+) -> OptimizationResults:
     """
     Newton method with inexact line search (Wolfe conditions)
 
@@ -294,7 +296,7 @@ def newton_linesearch(*, the_function, starting_point, maxiter=1000):
     :type starting_point: numpy.array
 
     :param maxiter: the algorithm stops if this number of iterations
-                    is reached. Defaut: 100
+                    is reached. Default: 1000
     :type maxiter: int
 
     :return: named tuple:
@@ -316,17 +318,17 @@ def newton_linesearch(*, the_function, starting_point, maxiter=1000):
     return OptimizationResults(
         solution=optimization_results.solution,
         messages=messages,
-        convergence=optimization_results.convergence
+        convergence=optimization_results.convergence,
     )
 
 
-def bfgs_linesearch(
+def bfgs_line_search(
     *,
-    the_function,
-    starting_point,
-    init_bfgs=None,
-    maxiter=1000,
-):
+    the_function: FunctionToMinimize,
+    starting_point: np.ndarray,
+    init_bfgs: np.ndarray | None = None,
+    maxiter: int = 1000,
+) -> OptimizationResults:
     """BFGS method with inexact line search (Wolfe conditions)
 
     :param the_function: object to calculate the objective function and its derivatives.
@@ -338,10 +340,6 @@ def bfgs_linesearch(
     :param init_bfgs: matrix used to initialize BFGS. If None, the
                      identity matrix is used. Default: None.
     :type init_bfgs: numpy.array
-
-    :param eps: the algorithm stops when this precision is reached.
-                 Default: :math:`\\varepsilon^{\\frac{1}{3}}`
-    :type eps: float
 
     :param maxiter: the algorithm stops if this number of iterations
                     is reached. Default: 1000
@@ -368,5 +366,5 @@ def bfgs_linesearch(
     return OptimizationResults(
         solution=optimization_results.solution,
         messages=messages,
-        convergence=optimization_results.convergence
+        convergence=optimization_results.convergence,
     )

@@ -8,39 +8,40 @@ Multi-objective variable neighborhood search algorithm
 
 import logging
 import random
-from datetime import date
 from collections import defaultdict
-from biogeme_optimization.exceptions import OptimizationError
-from biogeme_optimization.pareto import Pareto
 
-logger = logging.getLogger(__name__)
+from biogeme_optimization.exceptions import OptimizationError
+from biogeme_optimization.neighborhood import Neighborhood
+from biogeme_optimization.pareto import Pareto, SetElement
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ParetoClass(Pareto):
     """Class managing the solutions"""
 
-    def __init__(self, max_neighborhood, pareto_file=None):
+    def __init__(self, max_neighborhood: int, pareto_file: str | None = None) -> None:
         """
 
         :param max_neighborhood: the maximum size of the neighborhood
             that must be considered
         :type max_neighborhood: int
 
-        :param pareto_file: name of a  file contaning sets  from previous runs
+        :param pareto_file: name of a  file containing sets  from previous runs
         :type pareto_file: str
 
         """
         super().__init__(pareto_file)
-        self.max_neighborhood = max_neighborhood
+        self.max_neighborhood: int = max_neighborhood
         """the maximum size of the neighborhood that must be considered
         """
-        self.neighborhood_size = defaultdict(int)
+        self.neighborhood_size: defaultdict[SetElement, int] = defaultdict(int)
         """ dict associating the solutions IDs with the neighborhoodsize"""
 
         for elem in self.considered:
             self.neighborhood_size[elem] = 1
 
-    def change_neighborhood(self, element):
+    def change_neighborhood(self, element: SetElement) -> None:
         """Change the size of the neighborhood for a solution in the Pareto set.
 
         :param element: ID of the solution for which the neighborhood
@@ -50,7 +51,7 @@ class ParetoClass(Pareto):
         """
         self.neighborhood_size[element] += 1
 
-    def reset_neighborhood(self, element):
+    def reset_neighborhood(self, element: SetElement) -> None:
         """Reset the size of the neighborhood to 1 for a solution.
 
         :param element: ID of the solution for which the neighborhood
@@ -60,7 +61,7 @@ class ParetoClass(Pareto):
         """
         self.neighborhood_size[element] = 1
 
-    def add(self, element):
+    def add(self, element: SetElement) -> bool:
         """Add an element
         :param element: element to be considered for inclusion in the Pareto set.
         :type element: SetElement
@@ -75,12 +76,12 @@ class ParetoClass(Pareto):
             self.neighborhood_size[element] += 1
         return added
 
-    def select(self):
+    def select(self) -> tuple[SetElement | None, int | None]:
         """
         Select a candidate to be modified during the next iteration.
 
-        :return: a candidate and the neghborhoodsize
-        :rtype: tuple(SolutionClass, int)
+        :return: a candidate and the neighborhood size
+        :rtype: tuple(SetElement, int)
 
         """
 
@@ -100,11 +101,11 @@ class ParetoClass(Pareto):
 
 
 def vns(
-    problem,
-    first_solutions,
-    pareto,
-    number_of_neighbors=10,
-    maximum_attempts=100,
+    problem: Neighborhood,
+    first_solutions: list[SetElement],
+    pareto: ParetoClass,
+    number_of_neighbors: int = 10,
+    maximum_attempts: int = 100,
 ):
     """Multi objective Variable Neighborhood Search
 
@@ -125,7 +126,7 @@ def vns(
     :param maximum_attempts: an attempts consists in selecting a
         solution in the Pareto set, and trying to improve it. The
         parameters imposes an upper bound on the total number of
-        attemps, irrespectively if they are successful or not.
+        attempts, irrespectively if they are successful or not.
 
     :type maximum_attempts: int
 
@@ -214,7 +215,7 @@ def vns(
                 break
 
             if pareto.add(a_neighbor):
-                # A new non dominated solution has been found.
+                # the_matrix new non dominated solution has been found.
                 logger.info('*** New pareto solution: ')
                 logger.info(a_neighbor)
                 problem.last_neighbor_accepted()

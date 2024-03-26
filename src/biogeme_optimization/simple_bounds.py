@@ -5,9 +5,13 @@
 
 Functions for the trust region algorithm with simple bounds
 """
+
 import logging
 import numpy as np
+
+from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.exceptions import OptimizationError
+from biogeme_optimization.function import FunctionToMinimize
 from biogeme_optimization.hybrid_function import HybridFunction
 from biogeme_optimization.format import Column, FormattedColumns
 from biogeme_optimization.diagnostics import OptimizationResults
@@ -17,31 +21,30 @@ logger = logging.getLogger(__name__)
 
 def simple_bounds_newton_algorithm(
     *,
-    the_function,
-    bounds,
-    starting_point,
-    variable_names=None,
-    proportion_analytical_hessian=1.0,
-    first_radius=1.0,
-    cgtol=np.finfo(np.float64).eps ** 0.3333,
-    maxiter=1000,
-    eta1=0.01,
-    eta2=0.9,
-    enlarging_factor=10,
-):
-
+    the_function: FunctionToMinimize,
+    bounds: Bounds,
+    starting_point: np.ndarray,
+    variable_names: list[str] | None = None,
+    proportion_analytical_hessian: float = 1.0,
+    first_radius: float = 1.0,
+    conjugate_gradient_tol: float = np.finfo(np.float64).eps ** 0.3333,
+    maxiter: int = 1000,
+    eta1: float = 0.01,
+    eta2: float = 0.9,
+    enlarging_factor: float = 10.0,
+) -> OptimizationResults:
     """Trust region algorithm for problems with simple bounds
 
     :param the_function: object to calculate the objective function and its derivatives.
     :type the_function: optimization.functionToMinimize
 
-    :param bounds: bounds on the variables
+    :param bounds: bounds on the unsorted_set_of_variables
     :type bounds: class Bounds
 
     :param starting_point: starting point
     :type starting_point: numpy.array
 
-    :param variable_names: names of the variables, for reporting purposes
+    :param variable_names: names of the unsorted_set_of_variables, for reporting purposes
     :type variable_names: list(str)
 
     :param proportion_analytical_hessian: proportion of the iterations where
@@ -55,23 +58,11 @@ def simple_bounds_newton_algorithm(
     :param first_radius: initial radius of the trust region. Default: 100.
     :type first_radius: float
 
-    :param tol: the algorithm stops when this precision is reached.
-                Default: :math:`\\varepsilon^{\\frac{1}{3}}`
-    :type tol: float
-
-    :param steptol: the algorithm stops when the relative change in x
-                is below this threshold. Basically, if p significant
-                digits of x are needed, steptol should be set to
-                1.0e-p.  Default: :math:`10^{-5}`
-
-    :type steptol: float
-
-
-    :param cgtol: the conjugate gradient algorithm stops when this
+    :param conjugate_gradient_tol: the conjugate gradient algorithm stops when this
                   precision is reached.  Default:
                   :math:`\\varepsilon^{\\frac{1}{3}}`
 
-    :type cgtol: float
+    :type conjugate_gradient_tol: float
 
     :param maxiter: the algorithm stops if this number of iterations
                     is reached. Default: 1000.
@@ -169,9 +160,7 @@ def simple_bounds_newton_algorithm(
         messages['Algorithm'] = algo
         messages['Number of iterations'] = '0'
         return OptimizationResults(
-            solution=iterate,
-            messages=messages,
-            convergence=True
+            solution=iterate, messages=messages, convergence=True
         )
 
     radius = first_radius
@@ -184,13 +173,14 @@ def simple_bounds_newton_algorithm(
 
     for k in range(maxiter):
 
-        def logmessage():
+        def logmessage() -> None:
+            """Send messages to the logger"""
             values_to_report = [k]
             if variable_names is not None:
                 values_to_report += list(iterate)
             values_to_report += [
                 current_function.function,
-                the_function.relgrad,
+                the_function.relative_gradient_norm,
                 float(radius),
                 rho,
                 status,
@@ -203,26 +193,24 @@ def simple_bounds_newton_algorithm(
             gradient=current_function.gradient,
             hessian=current_function.hessian,
             radius=radius,
-            tol=cgtol,
+            tol=conjugate_gradient_tol,
         )
         if np.isnan(candidate).any():
-            radius = radius / 2.0
+            radius /= 2.0
             if radius <= min_delta:
                 messages = the_function.messages
                 messages['Algorithm'] = algo
                 message = f'Trust region is too small: {radius}'
                 messages['Cause of termination'] = message
                 messages['Number of iterations'] = f'{k+1}'
-                messages[
-                    'Proportion of Hessian calculation'
-                ] = the_hybrid_function.message()
+                messages['Proportion of Hessian calculation'] = (
+                    the_hybrid_function.message()
+                )
                 logmessage()
                 return OptimizationResults(
-                    solution=iterate,
-                    messages=messages,
-                    convergence=False
+                    solution=iterate, messages=messages, convergence=False
                 )
-            
+
             status = '-'
             logmessage()
             continue
@@ -244,36 +232,32 @@ def simple_bounds_newton_algorithm(
                     message = f'Trust region is too small: {radius}'
                     messages['Cause of termination'] = message
                     messages['Number of iterations'] = f'{k+1}'
-                    messages[
-                        'Proportion of Hessian calculation'
-                    ] = the_hybrid_function.message()
+                    messages['Proportion of Hessian calculation'] = (
+                        the_hybrid_function.message()
+                    )
                     logmessage()
                     return OptimizationResults(
-                        solution=iterate,
-                        messages=messages,
-                        convergence=False
+                        solution=iterate, messages=messages, convergence=False
                     )
-                
+
                 status = '-'
                 logmessage()
                 continue
         except RuntimeError as e:
             logger.warning(e)
-            radius = radius / 2.0
+            radius /= 2.0
             if radius <= min_delta:
                 messages = the_function.messages
                 messages['Algorithm'] = algo
                 message = f'Trust region is too small: {radius}'
                 messages['Cause of termination'] = message
                 messages['Number of iterations'] = f'{k+1}'
-                messages[
-                    'Proportion of Hessian calculation'
-                ] = the_hybrid_function.message()
+                messages['Proportion of Hessian calculation'] = (
+                    the_hybrid_function.message()
+                )
                 logmessage()
                 return OptimizationResults(
-                    solution=iterate,
-                    messages=messages,
-                    convergence=False
+                    solution=iterate, messages=messages, convergence=False
                 )
             failed = True
             status = '-'
@@ -294,33 +278,29 @@ def simple_bounds_newton_algorithm(
                 message = f'Trust region is too small: {radius}'
                 messages['Cause of termination'] = message
                 messages['Number of iterations'] = f'{k+1}'
-                messages[
-                    'Proportion of Hessian calculation'
-                ] = the_hybrid_function.message()
+                messages['Proportion of Hessian calculation'] = (
+                    the_hybrid_function.message()
+                )
                 logmessage()
                 return OptimizationResults(
-                    solution=iterate,
-                    messages=messages,
-                    convergence=False
+                    solution=iterate, messages=messages, convergence=False
                 )
             status = '-'
             logmessage()
-            
+
             continue
 
         if candidate_function is None:
-            # A stopping criterion has been detected
+            # the_matrix stopping criterion has been detected
             messages = the_function.messages
             messages['Algorithm'] = algo
             messages['Number of iterations'] = f'{k+1}'
-            messages[
-                'Proportion of Hessian calculation'
-            ] = the_hybrid_function.message()
+            messages['Proportion of Hessian calculation'] = (
+                the_hybrid_function.message()
+            )
             logmessage()
             return OptimizationResults(
-                solution=candidate,
-                messages=messages,
-                convergence=True
+                solution=candidate, messages=messages, convergence=True
             )
 
         iterate = candidate
@@ -342,8 +322,4 @@ def simple_bounds_newton_algorithm(
     messages['Cause of termination'] = message
     messages['Number of iterations'] = f'{maxiter}'
     messages['Proportion of Hessian calculation'] = the_hybrid_function.message()
-    return OptimizationResults(
-        solution=iterate,
-        messages=messages,
-        convergence=False
-    )
+    return OptimizationResults(solution=iterate, messages=messages, convergence=False)

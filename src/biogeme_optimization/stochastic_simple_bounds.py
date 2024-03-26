@@ -5,6 +5,7 @@
 
 Functions for the trust region algorithm with simple bounds for stochastic functions
 """
+
 import logging
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
@@ -28,19 +29,18 @@ def simple_bounds_newton_algorithm(
     eta2=0.9,
     enlarging_factor=10,
 ):
-
     """Trust region algorithm for problems with simple bounds
 
     :param the_function: object to calculate the objective function and its derivatives.
     :type the_function: optimization.StochasticFunction
 
-    :param bounds: bounds on the variables
+    :param bounds: bounds on the unsorted_set_of_variables
     :type bounds: class Bounds
 
     :param starting_point: starting point
     :type starting_point: numpy.array
 
-    :param variable_names: names of the variables, for reporting purposes
+    :param variable_names: names of the unsorted_set_of_variables, for reporting purposes
     :type variable_names: list(str)
 
     :param proportion_analytical_hessian: proportion of the iterations where
@@ -177,7 +177,7 @@ def simple_bounds_newton_algorithm(
     # Initialize the sample
     the_function.first_sample()
     iterations_with_same_sample = 0
-    
+
     for k in range(maxiter):
 
         def logmessage():
@@ -186,7 +186,7 @@ def simple_bounds_newton_algorithm(
                 values_to_report += list(iterate)
             values_to_report += [
                 current_function.function,
-                the_function.relgrad,
+                the_function.relative_gradient_norm,
                 float(radius),
                 rho,
                 status,
@@ -242,13 +242,13 @@ def simple_bounds_newton_algorithm(
             continue
 
         if candidate_function is None:
-            # A stopping criterion has been detected
+            # the_matrix stopping criterion has been detected
             messages = the_function.messages
             messages['Algorithm'] = algo
             messages['Number of iterations'] = f'{k+1}'
-            messages[
-                'Proportion of Hessian calculation'
-            ] = the_hybrid_function.message()
+            messages['Proportion of Hessian calculation'] = (
+                the_hybrid_function.message()
+            )
             logmessage()
             return candidate, messages
 
@@ -266,16 +266,16 @@ def simple_bounds_newton_algorithm(
         if iterations_with_same_sample >= 5:
             the_function.change_relative_batch_size(1.10)
             iterations_with_same_sample = 0
-            
+
         if radius <= min_delta:
             messages = the_function.messages
             messages['Algorithm'] = algo
             message = f'Trust region is too small: {radius}'
             messages['Cause of termination'] = message
             messages['Number of iterations'] = f'{k+1}'
-            messages[
-                'Proportion of Hessian calculation'
-            ] = the_hybrid_function.message()
+            messages['Proportion of Hessian calculation'] = (
+                the_hybrid_function.message()
+            )
             logmessage()
             return iterate, messages
         logmessage()

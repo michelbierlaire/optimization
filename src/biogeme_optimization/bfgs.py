@@ -7,14 +7,15 @@ Functions for the BFGS algorithm
 """
 
 import logging
-import traceback
+
 import numpy as np
+
 from biogeme_optimization.exceptions import OptimizationError
 
 logger = logging.getLogger(__name__)
 
 
-def bfgs(hessian_approx, delta_x, delta_g):
+def bfgs(hessian_approx: np.ndarray, delta_x: np.ndarray, delta_g: np.ndarray):
     """Update the BFGS matrix. Formula (13.12) of `Bierlaire (2015)`_
     where the method proposed by `Powell (1977)`_ is applied
 
@@ -41,11 +42,11 @@ def bfgs(hessian_approx, delta_x, delta_g):
         raise OptimizationError('In BFGS, the gradient difference cannot be zero')
     h_d = hessian_approx @ delta_x
     d_h_d = np.inner(delta_x, h_d)
-    denom = np.inner(delta_x, delta_g)
-    if denom >= 0.2 * d_h_d:
+    denominator = np.inner(delta_x, delta_g)
+    if denominator >= 0.2 * d_h_d:
         eta = delta_g
     else:
-        theta = 0.8 * d_h_d / (d_h_d - denom)
+        theta = 0.8 * d_h_d / (d_h_d - denominator)
         eta = theta * delta_g + (1 - theta) * h_d
 
     delta_x_eta = np.inner(delta_x, eta)
@@ -53,7 +54,9 @@ def bfgs(hessian_approx, delta_x, delta_g):
     return hessian_approx + hessian_update
 
 
-def inverse_bfgs(inverse_hessian_approx, delta_x, delta_g):
+def inverse_bfgs(
+    inverse_hessian_approx: np.ndarray, delta_x: np.ndarray, delta_g: np.ndarray
+):
     """Update the inverse BFGS matrix. Formula (13.13) of `Bierlaire (2015)`_
 
     .. _`Bierlaire (2015)`: http://optimizationprinciplesalgorithms.com/
@@ -72,15 +75,17 @@ def inverse_bfgs(inverse_hessian_approx, delta_x, delta_g):
     """
     dimension = len(delta_x)
 
-    denom = np.inner(delta_x, delta_g)
-    if denom <= 0.0:
+    denominator = np.inner(delta_x, delta_g)
+    if denominator <= 0.0:
         raise OptimizationError(
-            f"Unable to perform inverse BFGS update as d'y = {denom} <= 0"
+            f"Unable to perform inverse BFGS update as d'y = {denominator} <= 0"
         )
     d_y = np.outer(delta_x, delta_g)
     y_d = np.outer(delta_g, delta_x)
     d_d = np.outer(delta_x, delta_x)
     eye = np.identity(dimension)
     return (
-        (eye - (d_y / denom)) @ inverse_hessian_approx @ (eye - (y_d / denom))
-    ) + d_d / denom
+        (eye - (d_y / denominator))
+        @ inverse_hessian_approx
+        @ (eye - (y_d / denominator))
+    ) + d_d / denominator

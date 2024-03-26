@@ -5,9 +5,14 @@
 
 Implement a Pareto set for generic purposes.
 """
+
+from __future__ import annotations
 import logging
 from datetime import datetime
 import tomlkit as tk
+from matplotlib.axes import Axes
+from tomlkit.exceptions import NonExistentKey
+
 from biogeme_optimization.exceptions import OptimizationError
 
 try:
@@ -19,19 +24,19 @@ except ModuleNotFoundError:
 
 DATE_TIME_STRING = '__DATETIME__'
 
-def replace_date_time(a_string):
-    """ Replaces the string defined above by the current time and date
+
+def replace_date_time(a_string: str) -> str:
+    """Replaces the string defined above by the current time and date
 
     :param a_string: the string to be modified
-    :type a_string: str
 
     :return: the modified string, if the modification has been made. None otherwise
-    :rtpye: str
     """
     current_datetime = datetime.now()
-    formatted_datetime = current_datetime.strftime("%B %d, %Y. %H:%M:%S")        
+    formatted_datetime = current_datetime.strftime("%B %d, %Y. %H:%M:%S")
     return a_string.replace(f'{DATE_TIME_STRING}', formatted_datetime)
-    
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +46,7 @@ class SetElement:
 
     """
 
-    def __init__(self, element_id, objectives):
+    def __init__(self, element_id: str, objectives: list[float]) -> None:
         """Ctor
 
         :param element_id: identifier of the element
@@ -50,13 +55,13 @@ class SetElement:
         :param objectives: values of the objective functions
         :type objectives: list(float)
         """
-        self.element_id = element_id
-        self.objectives = objectives
+        self.element_id: str = element_id
+        self.objectives: list[float] = objectives
 
         if any(obj is None for obj in objectives):
-            raise OptimizationError(f'All objectives ust be defined: {objectives}')
+            raise OptimizationError(f'All objectives must be defined: {objectives}')
 
-    def __eq__(self, other):
+    def __eq__(self, other: SetElement) -> bool:
         if isinstance(other, SetElement):
             if self.element_id == other.element_id:
                 if self.objectives != other.objectives:
@@ -69,16 +74,16 @@ class SetElement:
                 return True
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.element_id, tuple(self.objectives)))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.element_id} {self.objectives}'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.element_id
 
-    def dominates(self, other):
+    def dominates(self, other: SetElement) -> bool:
         """Verifies if self dominates other.
 
         :param other: other element to check
@@ -102,36 +107,32 @@ class Pareto:
     are each minimized.
     """
 
-    def __init__(self, filename=None):
-        self.size_init_pareto = 0
-        self.size_init_considered = 0
-        self.size_init_invalid = 0
-        self.filename = filename
-        self.comments = [f'File automatically created on {DATE_TIME_STRING}']
+    def __init__(self, filename: str | None = None) -> None:
+        self.size_init_pareto: int = 0
+        self.size_init_considered: int = 0
+        self.size_init_invalid: int = 0
+        self.filename: str | None = filename
+        self.comments: list[str] = [f'File automatically created on {DATE_TIME_STRING}']
         """Comment to be inserted in the file when dumped, where
             __DATETIME__ is replaced by the current date and time
         
         """
-        self.pareto = set()
-        """dict containing the pareto set. The keys are the solutions
-            (class :class:`biogeme.vns.solutionClass`), and the values are
-            the size of the neighborhood that must be applied the next
-            time tat the solution is selected by the algorithm.
-
+        self.pareto: set[SetElement] = set()
+        """set of elements
         """
 
-        self.removed = set()
+        self.removed: set[SetElement] = set()
         """set of solutions that have been in the Pareto set ar some point,
             but have been removed because dominated by another
             solution.
         """
 
-        self.considered = set()
+        self.considered: set[SetElement] = set()
         """set of solutions that have been considered at some point by the
             algorithm
         """
 
-        self.invalid = set()
+        self.invalid: set[SetElement] = set()
         """set of solutions that have been deemed invalid
         """
 
@@ -149,18 +150,15 @@ class Pareto:
             else:
                 logger.info(f'Unable to read file {filename}. Pareto set empty.')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f'Pareto: {self.pareto} Removed: {self.removed} '
             f'Considered: {self.considered} Invalid: {self.invalid}'
         )
 
-    def dump(self):
+    def dump(self) -> None:
         """
         Dump the three sets on a file
-
-        :param comments: comments to include in the file, each entry on a different row
-        :type comment: list(str)
 
         :raise OptimizationError: if a problem has occured during dumping.
         """
@@ -195,7 +193,7 @@ class Pareto:
         with open(self.filename, 'w', encoding='utf-8') as f:
             print(tk.dumps(doc), file=f)
 
-    def get_element_from_id(self, the_id):
+    def get_element_from_id(self, the_id: str) -> SetElement | None:
         """Returns the element of a set given its ID
 
         :param the_id: identifiers of the element to return
@@ -212,7 +210,9 @@ class Pareto:
             raise OptimizationError(error_msg)
         return next(iter(found))
 
-    def parse_set_from_document(self, document, set_name):
+    def parse_set_from_document(
+        self, document: tk.document, set_name: str
+    ) -> set[SetElement]:
         """Parse a set from the document based on the set name.
 
         :param document: parsed document
@@ -225,16 +225,17 @@ class Pareto:
         :rtype: set
         """
         try:
-            result = {
-                SetElement(id, list(values))
-                for id, values in document[set_name].items()
-            }
-        except tk.exceptions.NonExistentKey:
+            the_set = document[set_name]
+        except NonExistentKey:
             logger.warning(f'No {set_name} section in pareto file')
-        return result
+            return set()
+        return {SetElement(the_id, list(values)) for the_id, values in the_set.items()}
 
-    def restore(self):
-        """Restore the Pareto from a file"""
+    def restore(self) -> bool:
+        """Restore the Pareto from a file
+
+        :return: True if the set was properly restored. False if the file was not found.
+        """
         try:
             with open(self.filename, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -252,13 +253,13 @@ class Pareto:
         self.size_init_invalid = len(self.invalid)
         return True
 
-    def length(self):
+    def length(self) -> int:
         """
         Obtain the length of the pareto set.
         """
         return len(self.pareto)
 
-    def length_of_all_sets(self):
+    def length_of_all_sets(self) -> tuple[int, int, int, int]:
         """
         Obtain the length of the four sets.
         """
@@ -269,7 +270,7 @@ class Pareto:
             len(self.invalid),
         )
 
-    def add_invalid(self, element):
+    def add_invalid(self, element: SetElement) -> bool:
         """
 
         :param element: invalid element to be stored
@@ -286,7 +287,7 @@ class Pareto:
 
         self.invalid.add(element)
 
-    def add(self, element):
+    def add(self, element: SetElement) -> bool:
         """
 
         - We define the set D as the set of members of the current
@@ -313,44 +314,44 @@ class Pareto:
             return False
 
         self.considered.add(element)
-        S_dominated = set()
-        D_dominating = set()
+        s_dominated = set()
+        d_dominating = set()
         for k in self.pareto:
             if element.dominates(k):
-                D_dominating.add(k)
+                d_dominating.add(k)
             if k.dominates(element):
-                S_dominated.add(k)
-        if S_dominated:
+                s_dominated.add(k)
+        if s_dominated:
             return False
         self.pareto.add(element)
-        self.pareto = {k for k in self.pareto if k not in D_dominating}
-        self.removed |= D_dominating
+        self.pareto = {k for k in self.pareto if k not in d_dominating}
+        self.removed |= d_dominating
         return True
 
-    def statistics(self):
+    def statistics(self) -> tuple[str, str, str]:
         """Report some statistics about the Pareto set
 
         :return: tuple of messages, possibly empty.
         :rtype: tuple(str)
         """
         if self.pareto is None:
-            return tuple()
+            return '', '', ''
         msg = (
             f'Pareto: {len(self.pareto)} ',
-            f'Condidered: {len(self.considered)} ',
+            f'Considered: {len(self.considered)} ',
             f'Removed: {len(self.removed)}',
         )
         return msg
 
     def plot(
         self,
-        objective_x=0,
-        objective_y=1,
-        label_x=None,
-        label_y=None,
-        margin_x=5,
-        margin_y=5,
-        ax=None,
+        objective_x: int = 0,
+        objective_y: int = 1,
+        label_x: str | None = None,
+        label_y: str | None = None,
+        margin_x: int = 5,
+        margin_y: int = 5,
+        ax: Axes | None = None,
     ):
         """Plot the members of the set according to two
             objective functions.  They  determine the x- and
@@ -362,16 +363,16 @@ class Pareto:
         :param objective_y: index of the objective function to use for the y-coordinate.
         :param objective_y: int
 
-        :param label_x: label for the x_axis
+        :param label_x: label for the x-axis
         :type label_x: str
 
-        :param label_y: label for the y_axis
+        :param label_y: label for the y-axis
         :type label_y: str
 
-        :param margin_x: margin for the x axis
+        :param margin_x: margin for the x-axis
         :type margin_x: int
 
-        :param margin_y: margin for the y axis
+        :param margin_y: margin for the y-axis
         :type margin_y: int
 
         :param ax: matplotlib axis for the plot
