@@ -5,6 +5,7 @@
 
 Examples of functions to be used in the tests
 """
+
 import numpy as np
 from biogeme_optimization.function import FunctionToMinimize, FunctionData
 from biogeme_optimization.exceptions import OptimizationError
@@ -21,18 +22,18 @@ class MyFunctionToMinimize(FunctionToMinimize):
         return self.dim
 
     def _f(self):
-        """Calculate the value of the function
+        """Calculate the canonical_value of the function
 
-        :return: value of the function
+        :return: canonical_value of the function
         :rtype: float
         """
         half_sum_of_squares = np.sum(np.square(self.x)) / 2
         return half_sum_of_squares
 
     def _f_g(self):
-        """Calculate the value of the function and the gradient
+        """Calculate the canonical_value of the function and the gradient
 
-        :return: value of the function and the gradient
+        :return: canonical_value of the function and the gradient
         :rtype: tuple float, numpy.array
         """
         half_sum_of_squares = np.sum(np.square(self.x)) / 2
@@ -42,9 +43,9 @@ class MyFunctionToMinimize(FunctionToMinimize):
         return result
 
     def _f_g_h(self):
-        """Calculate the value of the function, the gradient and the Hessian
+        """Calculate the canonical_value of the function, the gradient and the Hessian
 
-        :return: value of the function, the gradient and the Hessian
+        :return: canonical_value of the function, the gradient and the Hessian
         :rtype: tuple float, numpy.array, numpy.array
         """
         half_sum_of_squares = np.sum(np.square(self.x)) / 2
@@ -57,10 +58,10 @@ class MyFunctionToMinimize(FunctionToMinimize):
         return result
 
     def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
+        """Calculate the canonical_value of the function, the gradient and
         the BHHH matrix
 
-        :return: value of the function, the gradient and the BHHH
+        :return: canonical_value of the function, the gradient and the BHHH
         :rtype: tuple float, numpy.array, numpy.array
         """
         raise OptimizationError('BHHH is irrelevant in this context')
@@ -79,17 +80,17 @@ class Example58(FunctionToMinimize):
         return self.dim
 
     def _f(self):
-        """Calculate the value of the function
+        """Calculate the canonical_value of the function
 
-        :return: value of the function
+        :return: canonical_value of the function
         :rtype: float
         """
         return 0.5 * self.x[0] ** 2 + self.x[0] * np.cos(self.x[1])
 
     def _f_g(self):
-        """Calculate the value of the function and the gradient
+        """Calculate the canonical_value of the function and the gradient
 
-        :return: value of the function and the gradient
+        :return: canonical_value of the function and the gradient
         :rtype: FunctionDatatuple float, numpy.array
         """
         f = self.f()
@@ -98,9 +99,9 @@ class Example58(FunctionToMinimize):
         return result
 
     def _f_g_h(self):
-        """Calculate the value of the function, the gradient and the Hessian
+        """Calculate the canonical_value of the function, the gradient and the Hessian
 
-        :return: value of the function, the gradient and the Hessian
+        :return: canonical_value of the function, the gradient and the Hessian
         :rtype: tuple float, numpy.array, numpy.array
         """
         f = self.f()
@@ -115,10 +116,10 @@ class Example58(FunctionToMinimize):
         return result
 
     def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
+        """Calculate the canonical_value of the function, the gradient and
         the BHHH matrix
 
-        :return: value of the function, the gradient and the BHHH
+        :return: canonical_value of the function, the gradient and the BHHH
         :rtype: tuple float, numpy.array, numpy.array
         """
         raise OptimizationError('BHHH is irrelevant in this context')
@@ -137,18 +138,18 @@ class Rosenbrock(FunctionToMinimize):
         return self.dim
 
     def _f(self):
-        """Calculate the value of the function
+        """Calculate the canonical_value of the function
 
-        :return: value of the function
+        :return: canonical_value of the function
         :rtype: float
         """
         f = 100.0 * (self.x[1] - self.x[0] * self.x[0]) ** 2 + (1 - self.x[0]) ** 2
         return f
 
     def _f_g(self):
-        """Calculate the value of the function and the gradient
+        """Calculate the canonical_value of the function and the gradient
 
-        :return: value of the function and the gradient
+        :return: canonical_value of the function and the gradient
         :rtype: FunctionDatatuple float, numpy.array
         """
         f = 100.0 * (self.x[1] - self.x[0] * self.x[0]) ** 2 + (1 - self.x[0]) ** 2
@@ -165,9 +166,9 @@ class Rosenbrock(FunctionToMinimize):
         return result
 
     def _f_g_h(self):
-        """Calculate the value of the function, the gradient and the Hessian
+        """Calculate the canonical_value of the function, the gradient and the Hessian
 
-        :return: value of the function, the gradient and the Hessian
+        :return: canonical_value of the function, the gradient and the Hessian
         :rtype: tuple float, numpy.array, numpy.array
         """
         f = 100.0 * (self.x[1] - self.x[0] * self.x[0]) ** 2 + (1 - self.x[0]) ** 2
@@ -190,10 +191,10 @@ class Rosenbrock(FunctionToMinimize):
         return result
 
     def _f_g_bhhh(self):
-        """Calculate the value of the function, the gradient and
+        """Calculate the canonical_value of the function, the gradient and
         the BHHH matrix
 
-        :return: value of the function, the gradient and the BHHH
+        :return: canonical_value of the function, the gradient and the BHHH
         :rtype: tuple float, numpy.array, numpy.array
         """
         raise OptimizationError('BHHH is irrelevant in this context')
