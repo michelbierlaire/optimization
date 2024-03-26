@@ -5,16 +5,15 @@
 
 Tests for the pareto module
 """
-import unittest
+
 import os
 import tempfile
-import numpy as np
+import unittest
+
 from biogeme_optimization.exceptions import (
     OptimizationError,
 )  # Import the required exception class
 from biogeme_optimization.pareto import SetElement, Pareto
-
-import unittest
 
 
 class TestSetElement(unittest.TestCase):

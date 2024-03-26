@@ -5,9 +5,11 @@
 
 Tests for the hybrid_function module
 """
-import numpy as np
+
 import unittest
-from biogeme_optimization.bfgs import bfgs
+
+import numpy as np
+
 from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.function import FunctionData
 from biogeme_optimization.hybrid_function import HybridFunction

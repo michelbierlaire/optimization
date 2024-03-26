@@ -5,11 +5,12 @@
 
 Tests for the neighborhood module
 """
+
 import unittest
-import os
-import tempfile
-import numpy as np
 from unittest.mock import patch
+
+import numpy as np
+
 from biogeme_optimization.exceptions import (
     OptimizationError,
 )  # Import the required exception class

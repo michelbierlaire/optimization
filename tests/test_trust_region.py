@@ -5,6 +5,7 @@
 
 Tests for the trust_region module
 """
+
 import unittest
 import numpy as np
 import scipy.linalg as la
@@ -374,11 +375,14 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 0 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -388,11 +392,14 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 0 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -409,12 +416,14 @@ class TestAlgorithms(unittest.TestCase):
         optimization_results = bfgs_trust_region(
             the_function=fct, starting_point=starting_point, use_dogleg=True
         )
-
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 0 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -424,11 +433,14 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 0 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -447,11 +459,14 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 7.1e-07 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 7.1e-07 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -461,14 +476,16 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 1.5e-09 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 1.5e-09 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
-        
 
     def test_bfgs_trust_region_ex58(self):
         fct = Example58()
@@ -485,7 +502,9 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         termination_mesage = optimization_results.messages['Cause of termination']
@@ -499,7 +518,9 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         termination_mesage = optimization_results.messages['Cause of termination']
@@ -522,11 +543,14 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 2.6e-06 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 2.6e-06 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -536,11 +560,14 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 9.8e-10 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 9.8e-10 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -562,14 +589,16 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         termination_mesage = optimization_results.messages['Cause of termination']
         expected_termination_message = 'Relative gradient = ...'
         self.assertEqual(termination_mesage[:19], expected_termination_message[:19])
         self.assertTrue(optimization_results.convergence)
-        
+
         # Call the newton_linesearch function
         optimization_results = bfgs_trust_region(
             the_function=fct,
@@ -579,7 +608,9 @@ class TestAlgorithms(unittest.TestCase):
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         termination_mesage = optimization_results.messages['Cause of termination']

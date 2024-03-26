@@ -5,6 +5,7 @@
 
 Tests for the bounds module
 """
+
 import unittest
 import numpy as np
 from biogeme_optimization.exceptions import (
@@ -229,7 +230,7 @@ class TestCode(unittest.TestCase):
         # Create Bounds object for testing
         bounds = Bounds([(0, 5), (-2, 2), (1, 10)])
 
-        # Test subspace with selected variables
+        # Test subspace with selected unsorted_set_of_variables
         selected_variables = [True, False, True]
         expected_output = Bounds([(0, 5), (1, 10)])
         self.assertEqual(
@@ -380,7 +381,7 @@ class TestCode(unittest.TestCase):
             bounds.activity(point)
 
     def test_active_constraints_all_active(self):
-        # Test case: All variables are inactive
+        # Test case: All unsorted_set_of_variables are inactive
         bounds = Bounds([(0, 1), (2, 3), (-1, 1)])
         point = np.array([0.5, 2.5, 0])
         expected_status = set()
@@ -412,7 +413,7 @@ class TestCode(unittest.TestCase):
         self.assertSetEqual(active_constraints, expected_status)
 
     def test_active_constraints_no_active(self):
-        # Test case: All variables are active
+        # Test case: All unsorted_set_of_variables are active
         bounds = Bounds([(0, 1), (2, 3), (-1, 1)])
         point = np.array([0, 3, -1])
         expected_status = {0, 1, 2}
@@ -420,7 +421,7 @@ class TestCode(unittest.TestCase):
         self.assertSetEqual(active_constraints, expected_status)
 
     def test_inactive_constraints_all_inactive(self):
-        # Test case: All variables are inactive
+        # Test case: All unsorted_set_of_variables are inactive
         bounds = Bounds([(0, 1), (2, 3), (-1, 1)])
         point = np.array([0.5, 2.5, 0])
         expected_status = {0, 1, 2}
@@ -452,7 +453,7 @@ class TestCode(unittest.TestCase):
         self.assertSetEqual(active_constraints, expected_status)
 
     def test_inactive_constraints_no_inactive(self):
-        # Test case: All variables are active
+        # Test case: All unsorted_set_of_variables are active
         bounds = Bounds([(0, 1), (2, 3), (-1, 1)])
         point = np.array([0, 3, -1])
         expected_status = set()
@@ -488,7 +489,7 @@ class TestCode(unittest.TestCase):
             bounds.breakpoints(point, direction)
 
     def test_projected_direction(self):
-        # Define the bounds for the variables
+        # Define the bounds for the unsorted_set_of_variables
         bounds = Bounds([(-1, 1), (-1, 1), (-1, 1)])
 
         # Test case 1: x_current is inactive

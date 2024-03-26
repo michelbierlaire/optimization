@@ -5,15 +5,16 @@
 
 Tests for the algebra module
 """
+
 import unittest
-import numpy as np
-from biogeme_optimization.exceptions import (
-    OptimizationError,
-)  # Import the required exception class
+
 from biogeme_optimization.algebra import (
     schnabel_eskow,
     schnabel_eskow_direction,
 )
+from biogeme_optimization.exceptions import (
+    OptimizationError,
+)  # Import the required exception class
 
 
 class SchnabelEskowTestCase(unittest.TestCase):
@@ -24,7 +25,7 @@ class SchnabelEskowTestCase(unittest.TestCase):
         # Verify that L is lower triangular
         self.assertTrue(np.all(np.tril(L) == L))
 
-        # Verify that A + E = PLL^TP^T
+        # Verify that the_matrix + E = PLL^TP^T
         result = P @ L @ L.T @ P.T + E
         np.testing.assert_array_almost_equal(A, result, decimal=5)
 
@@ -41,7 +42,7 @@ class SchnabelEskowTestCase(unittest.TestCase):
         self.assertTrue(np.allclose(E, expected_E))
         self.assertTrue(np.allclose(P, expected_P))
 
-        # Verify that A + E = PLL^TP^T
+        # Verify that the_matrix + E = PLL^TP^T
         result = P @ L @ L.T @ P.T + E
         np.testing.assert_array_almost_equal(A, result, decimal=5)
 
@@ -51,7 +52,7 @@ class SchnabelEskowTestCase(unittest.TestCase):
         # Verify that L is lower triangular
         self.assertTrue(np.all(np.tril(L) == L))
 
-        # Verify that A + E = PLL^TP^T
+        # Verify that the_matrix + E = PLL^TP^T
         result = P @ L @ L.T @ P.T + E
         np.testing.assert_array_almost_equal(A, result, decimal=5)
 
@@ -61,7 +62,7 @@ class SchnabelEskowTestCase(unittest.TestCase):
         # Verify that L is lower triangular
         self.assertTrue(np.all(np.tril(L) == L))
 
-        # Verify that A + E = PLL^TP^T
+        # Verify that the_matrix + E = PLL^TP^T
         result = P @ L @ L.T @ P.T + E
         np.testing.assert_array_almost_equal(A, result, decimal=5)
 
@@ -71,7 +72,7 @@ class SchnabelEskowTestCase(unittest.TestCase):
         # Verify that L is lower triangular
         self.assertTrue(np.all(np.tril(L) == L))
 
-        # Verify that A + E = PLL^TP^T
+        # Verify that the_matrix + E = PLL^TP^T
         result = P @ L @ L.T @ P.T + E
         np.testing.assert_array_almost_equal(A, result, decimal=5)
 
@@ -117,12 +118,11 @@ class SchnabelEskowTestCase(unittest.TestCase):
 
 import unittest
 import numpy as np
-from scipy.linalg import cholesky, solve_triangular
 
 
 class SchnabelEskowDirectionTestCase(unittest.TestCase):
     def test_schnabel_eskow(self):
-        # Define input matrix A
+        # Define input matrix the_matrix
         A = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
         # Call the schnabel_eskow function
@@ -158,7 +158,7 @@ class SchnabelEskowDirectionTestCase(unittest.TestCase):
         self.assertTrue(np.allclose(P, expected_P))
 
     def test_schnabel_eskow_non_convex(self):
-        # Define input matrix A
+        # Define input matrix the_matrix
         A = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])
 
         # Call the schnabel_eskow function

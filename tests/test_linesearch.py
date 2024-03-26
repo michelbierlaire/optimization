@@ -5,15 +5,16 @@
 
 Tests for the linesearch module
 """
+
 import unittest
 import numpy as np
 from biogeme_optimization.exceptions import (
     OptimizationError,
 )  # Import the required exception class
 from biogeme_optimization.linesearch import (
-    linesearch,
-    newton_linesearch,
-    bfgs_linesearch,
+    line_search,
+    newton_line_search,
+    bfgs_line_search,
     DirectionManagement,
     NewtonDirection,
     InverseBfgsDirection,
@@ -71,7 +72,7 @@ class LineSearchTestCase(unittest.TestCase):
         beta2 = 0.99
         lbd = 2.0
 
-        alpha = linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+        alpha = line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
         # Perform assertions to validate the output
         self.assertIsInstance(alpha, float)
@@ -86,7 +87,7 @@ class LineSearchTestCase(unittest.TestCase):
         beta2 = 0.99
         lbd = 2.0
 
-        alpha = linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+        alpha = line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
         # Perform assertions to validate the output
         self.assertIsInstance(alpha, float)
@@ -101,7 +102,7 @@ class LineSearchTestCase(unittest.TestCase):
         beta2 = 1.0e-4
         lbd = 2.0
 
-        alpha = linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+        alpha = line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
         # Perform assertions to validate the output
         self.assertIsInstance(alpha, float)
@@ -117,7 +118,7 @@ class LineSearchTestCase(unittest.TestCase):
         lbd = 0.5
 
         with self.assertRaises(OptimizationError):
-            linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+            line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
     def test_linesearch_alpha0_less_than_zero(self):
         fct = MyFunctionToMinimize(dimension=2)
@@ -129,7 +130,7 @@ class LineSearchTestCase(unittest.TestCase):
         lbd = 2.0
 
         with self.assertRaises(OptimizationError):
-            linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+            line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
     def test_linesearch_beta1_greater_than_beta2(self):
         fct = MyFunctionToMinimize(dimension=2)
@@ -141,7 +142,7 @@ class LineSearchTestCase(unittest.TestCase):
         lbd = 2.0
 
         with self.assertRaises(OptimizationError):
-            linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+            line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
     def test_linesearch_non_descent_direction(self):
         fct = MyFunctionToMinimize(dimension=2)
@@ -153,7 +154,7 @@ class LineSearchTestCase(unittest.TestCase):
         lbd = 2.0
 
         with self.assertRaises(OptimizationError):
-            linesearch(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
+            line_search(fct, iterate, descent_direction, alpha0, beta1, beta2, lbd)
 
     def test_newton_linesearch(self):
         fct = MyFunctionToMinimize(dimension=2)
@@ -165,16 +166,19 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([0.0, 0.0])
 
         # Call the newton_linesearch function
-        optimization_results = newton_linesearch(
+        optimization_results = newton_line_search(
             the_function=fct, starting_point=starting_point
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 0 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -188,16 +192,19 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([0.0, 0.0])
 
         # Call the newton_linesearch function
-        optimization_results = bfgs_linesearch(
+        optimization_results = bfgs_line_search(
             the_function=fct, starting_point=starting_point
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 0 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 0 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -211,16 +218,19 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([1.0, np.pi])
 
         # Call the newton_linesearch function
-        optimization_results = newton_linesearch(
+        optimization_results = newton_line_search(
             the_function=fct, starting_point=starting_point
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 2.1e-10 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 2.1e-10 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -234,16 +244,19 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([-1.0, 0])
 
         # Call the newton_linesearch function
-        optimization_results = bfgs_linesearch(
+        optimization_results = bfgs_line_search(
             the_function=fct, starting_point=starting_point
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 3.4e-06 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 3.4e-06 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -257,16 +270,19 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([1.0, 1.0])
 
         # Call the newton_linesearch function
-        optimization_results = newton_linesearch(
+        optimization_results = newton_line_search(
             the_function=fct, starting_point=starting_point
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-6)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-6
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 2.1e-07 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 2.1e-07 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
 
@@ -280,19 +296,22 @@ class LineSearchTestCase(unittest.TestCase):
         expected_solution = np.array([1.0, 1.00])
 
         # Call the newton_linesearch function
-        optimization_results = bfgs_linesearch(
+        optimization_results = bfgs_line_search(
             the_function=fct, starting_point=starting_point
         )
 
         # Check the solution
-        np.testing.assert_allclose(optimization_results.solution, expected_solution, atol=1e-3)
+        np.testing.assert_allclose(
+            optimization_results.solution, expected_solution, atol=1e-3
+        )
 
         # Check the termination message
         self.assertEqual(
-            optimization_results.messages['Cause of termination'], 'Relative gradient = 1.5e-07 <= 6.1e-06'
+            optimization_results.messages['Cause of termination'],
+            'Relative gradient = 1.5e-07 <= 6.1e-06',
         )
         self.assertTrue(optimization_results.convergence)
-        
+
 
 if __name__ == '__main__':
     unittest.main()
