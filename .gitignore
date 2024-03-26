@@ -161,3 +161,4 @@ cython_debug/
 examples/scripts/example_pareto.txt
 examples/scripts/knapsack.pareto
 knapsack.pareto
+.DS_Store
