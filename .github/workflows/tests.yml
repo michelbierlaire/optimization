@@ -1,3 +1,5 @@
+name: Run tox on Multiple OS
+
 on:
   workflow_dispatch:
   push:
