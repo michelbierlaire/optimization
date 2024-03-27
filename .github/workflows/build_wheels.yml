@@ -28,9 +28,9 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: build-${{ matrix.os }}-${{ matrix.python-version }}
+        name: wheels
         path: dist/biogeme_optimization*.whl
-
+    
   pypi-publish:
     name: upload release to PyPI
     needs: build
@@ -44,7 +44,13 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v3
         with:
-          path: dist/
+          name: wheels
+          path: tempdir
+
+      - name: Move wheel files
+        run: |
+          mkdir -p dist
+          mv tempdir/wheels/*.whl dist/ 
 
 
       - name: Publish package distributions to PyPI
