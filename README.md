@@ -5,6 +5,9 @@ Various optimization algorithms used for teaching and research
 
 The package contains the following modules:
 
+## teaching
+It contains various functions and classes to teach optimization.
+
 ## algebra
 It contains functions dealing with linear algebra:
 
