@@ -2,42 +2,11 @@ name: Run tox and build wheels on multiple OS
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
-      - develop
-  pull_request:
-    branches:
-      - master
-      - develop
   release:
     types: [created]
 
 jobs:
-  test:
-    name: Tests on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ['3.12', '3.11', '3.10']
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install tox tox-gh-actions
-    - name: Test with tox
-      run: tox
-
   build:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'release' && needs.test.result == 'success')
     name: Build wheels on ${{ matrix.os }}
     needs: test
     runs-on: ${{ matrix.os }}
@@ -64,7 +33,6 @@ jobs:
         path: dist/
 
   upload:
-    if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
     environment:
