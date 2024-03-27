@@ -1,4 +1,4 @@
-# biogeme_optimization
+# biogeme-optimization
 [![PyPi](https://img.shields.io/pypi/v/biogeme_optimization.svg)](https://pypi.python.org/pypi/biogeme_optimization)
 
 Various optimization algorithms used for teaching and research

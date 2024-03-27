@@ -1,27 +1,28 @@
-name: Run tox on Multiple OS
+name: Run tox on multiple OS
 
 on:
   workflow_dispatch:
   push:
     branches:
       - master
+      - develop
   pull_request:
     branches:
       - master
+      - develop
 
 jobs:
   test:
-    name: Tests
+    name: Tests on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ['3.12', '3.11', '3.10']
-
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{matrix.python-version }}
     - name: Install dependencies
