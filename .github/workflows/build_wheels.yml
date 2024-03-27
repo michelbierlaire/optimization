@@ -31,22 +31,21 @@ jobs:
         name: build-${{ matrix.os }}-${{ matrix.python-version }}
         path: dist/
 
-  upload:
+  pypi-publish:
+    name: upload release to PyPI
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/biogeme-optimization
+    # Specifying a GitHub environment is optional, but strongly encouraged
+    environment: release
     permissions:
-      contents: read
+      # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v3
         with:
           path: dist/
-      - name: Upload wheels to PyPI
+
+
+      - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
