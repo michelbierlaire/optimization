@@ -1,4 +1,4 @@
-name: Run tox and build wheels on multiple OS
+name: Run tox on multiple OS
 
 on:
   workflow_dispatch:
