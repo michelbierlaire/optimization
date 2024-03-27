@@ -5,6 +5,9 @@ on:
   release:
     types: [created]
 
+env:
+  ARTIFACT: artifact.bin
+
 jobs:
   build:
     name: Build wheels on ${{ matrix.os }}
@@ -34,10 +37,10 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
-        path: dist/biogeme_optimization-*.whl
+        name: build-${{ matrix.os }}-${{ matrix.python-version }}
+        path: ${{ env.ARTIFACT }}
 
-    
+
 
   upload:
     needs: build
@@ -48,7 +51,7 @@ jobs:
         with:
           path: dist
       - name: Upload wheels to PyPI
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
