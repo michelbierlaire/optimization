@@ -37,4 +37,4 @@ jobs:
         name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
         path: dist/biogeme_optimization-*.whl
 
-  
+
