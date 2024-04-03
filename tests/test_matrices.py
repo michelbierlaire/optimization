@@ -13,6 +13,7 @@ import numpy as np
 from biogeme_optimization.teaching.matrices import (
     find_opposite_columns,
     find_columns_multiple_identity,
+    print_string_matrix,
 )
 
 
@@ -92,3 +93,53 @@ class TestFindSpecialColumns(unittest.TestCase):
         matrix = np.array([[1, 7, 0], [0, 2, 3], [3, 0, 4]])
         result = find_columns_multiple_identity(matrix)
         self.assertEqual(result, [])
+
+
+class TestPrintStringMatrix(unittest.TestCase):
+    def test_basic_functionality(self):
+        """Test the basic functionality with rows and headers."""
+        matrix = [['Alice', '30', 'Engineer'], ['Bob', '25', 'Designer']]
+        headers = ['Name', 'Age', 'Occupation']
+        expected_output = (
+            'Name  | Age | Occupation\n'
+            '------------------------\n'
+            'Alice | 30  | Engineer  \n'
+            'Bob   | 25  | Designer  '
+        )
+        self.assertEqual(print_string_matrix(matrix, headers), expected_output)
+
+    def test_with_no_headers(self):
+        """Test functionality with rows but no headers."""
+        matrix = [['Alice', '30', 'Engineer'], ['Bob', '25', 'Designer']]
+        expected_output = 'Alice | 30 | Engineer\nBob   | 25 | Designer'
+        self.assertEqual(print_string_matrix(matrix), expected_output)
+
+    def test_empty_matrix(self):
+        """Test with an empty matrix."""
+        self.assertEqual(print_string_matrix([]), '')
+
+    def test_headers_length_mismatch(self):
+        """Test error raised when headers length doesn't match the number of columns."""
+        matrix = [['Alice', '30', 'Engineer']]
+        headers = ['Name', 'Age']
+        with self.assertRaises(AssertionError):
+            print_string_matrix(matrix, headers)
+
+    def test_varying_string_lengths(self):
+        """Test with varying lengths of strings within the matrix."""
+        matrix = [
+            ['Alice', '3000', 'Software Engineer'],
+            ['Bob', '25', 'UI/UX Designer'],
+        ]
+        headers = ['Name', 'Age', 'Occupation']
+        expected_output = (
+            'Name  | Age  | Occupation       \n'
+            '--------------------------------\n'
+            'Alice | 3000 | Software Engineer\n'
+            'Bob   | 25   | UI/UX Designer   '
+        )
+        self.assertEqual(print_string_matrix(matrix, headers), expected_output)
+
+
+if __name__ == '__main__':
+    unittest.main()

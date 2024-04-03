@@ -199,3 +199,28 @@ class StandardCanonicalForms:
                 raise ValueError(error_msg)
         assert not np.any(np.isnan(canonical_x)), 'The vector contains NaN entries.'
         return canonical_x
+
+
+def canonical_to_standard(
+    canonical_a: np.ndarray, canonical_b: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, str]:
+    """
+    Transforms a polyhedron in canonical form into one in standard form.
+
+    :param canonical_a: constraints matrix $A$ for the canonical form.
+    :param canonical_b: right hand side for the canonical form.
+    :return: three items:
+
+        - constraints matrix $A$ for the standard form,
+        - right hand side for the standard form,
+        - description of the constraints in standard form.
+    """
+    the_constraints = AllConstraints.from_canonical_form(
+        matrix=canonical_a, vector=canonical_b
+    )
+    the_forms = StandardCanonicalForms(constraints=the_constraints)
+    return (
+        the_forms.standard_matrix,
+        the_forms.standard_vector,
+        str(the_forms.standard_form),
+    )
