@@ -457,13 +457,20 @@ class Constraint:
         lhs = self.calculate_left_hand_side(vector_x=vector_x, indices=indices)
 
         def check_lesser_or_equal() -> bool:
-            return lhs <= self.right_hand_side
+            slack = self.right_hand_side - lhs
+            if np.isclose(slack, 0, atol=np.finfo(float).eps):
+                return True
+            return slack >= 0.0
 
         def check_greater_or_equal() -> bool:
-            return lhs >= self.right_hand_side
+            slack = lhs - self.right_hand_side
+            if np.isclose(slack, 0, atol=np.finfo(float).eps):
+                return True
+            return slack >= 0.0
 
         def check_equal() -> bool:
-            return lhs >= self.right_hand_side
+            slack = lhs - self.right_hand_side
+            return np.isclose(slack, 0, atol=np.finfo(float).eps)
 
         dict_of_check: dict[SignConstraint, Callable[[], bool]] = {
             SignConstraint.GREATER_OR_EQUAL: check_greater_or_equal,

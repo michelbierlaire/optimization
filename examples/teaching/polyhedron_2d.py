@@ -1,5 +1,4 @@
 """Identification of vertices and plotting of the polyhedron: illustration of usage
-********************************************************************************
 
 Michel Bierlaire
 Mon Mar 11 13:19:43 2024
@@ -8,7 +7,10 @@ Mon Mar 11 13:19:43 2024
 import numpy as np
 from matplotlib import pyplot as plt
 
-from biogeme_optimization.teaching.polyhedron_2d import intersection, Polyhedron2d
+from biogeme_optimization.teaching.linear_constraints.polyhedron_2d import (
+    intersection,
+    Polyhedron2d,
+)
 from biogeme_optimization.teaching.linear_constraints import (
     AllConstraints,
     StandardCanonicalForms,
@@ -41,10 +43,10 @@ b = np.array([1, 1, 0, 0])
 polyhedron = AllConstraints.from_canonical_form(matrix=A, vector=b)
 the_plot_polyhedron = Polyhedron2d(
     polyhedron=StandardCanonicalForms(constraints=polyhedron),
-    x_min=-1.1,
-    x_max=1.1,
-    y_min=-1.1,
-    y_max=1.1,
+    #    x_min=-1.1,
+    #    x_max=1.1,
+    #    y_min=-1.1,
+    #    y_max=1.1,
 )
 the_vertices = the_plot_polyhedron.vertices()
 print(the_vertices)

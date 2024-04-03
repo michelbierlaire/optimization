@@ -158,6 +158,7 @@ class AllConstraints:
         for col_index, row_index in the_list:
             if matrix[row_index, col_index] < 0:
                 matrix[row_index, :] = -matrix[row_index, :]
+                vector[row_index] = -vector[row_index]
 
         regular_variables_indices = set(range(n_variables)) - slack_variables_indices
         regular_variables = {
