@@ -42,3 +42,6 @@ download-url = "https://pypi.org/project/bierlaire-optimization"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "biogeme_optimization.version.__version__" }
