@@ -1,0 +1,4 @@
+build/*
+.tox/*
+.idea/*
+.coverage
