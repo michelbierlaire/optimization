@@ -1,10 +1,14 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "cython"]
+requires = [
+    "setuptools>=70.1.1",
+    "wheel>=0.43.0",
+]
 build-backend = "setuptools.build_meta"
+
 
 [project]
 name = "biogeme-optimization"
-version = "0.0.8"
+dynamic = ["version"]
 description = "Various optimization algorithms for teaching and research"
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [{ name = "Michel Bierlaire", email = "michel.bierlaire@epfl.ch" }]
@@ -42,3 +46,6 @@ download-url = "https://pypi.org/project/bierlaire-optimization"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "biogeme_optimization.version.__version__" }
