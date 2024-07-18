@@ -8,4 +8,5 @@ dist/*
 src/biogeme_optimization/__pycache__/*
 tests/__pycache__/*
 examples/scripts/__pycache__/*
+examples/stochastic/__pycache__/*
 *.pareto
