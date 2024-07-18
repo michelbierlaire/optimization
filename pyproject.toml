@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "biogeme-optimization"
-version = "0.0.8"
 description = "Various optimization algorithms for teaching and research"
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [{ name = "Michel Bierlaire", email = "michel.bierlaire@epfl.ch" }]
