@@ -187,45 +187,17 @@ def simple_bounds_newton_algorithm(
             ]
             logger.info(the_formatter.formatted_row(values_to_report))
 
-        # Solve the quadratic problem in the subspace defined by the GCP
-        candidate, _ = bounds.truncated_conjugate_gradient_subspace(
-            iterate=iterate,
-            gradient=current_function.gradient,
-            hessian=current_function.hessian,
-            radius=radius,
-            tol=conjugate_gradient_tol,
-        )
-        if np.isnan(candidate).any():
-            radius /= 2.0
-            if radius <= min_delta:
-                messages = the_function.messages
-                messages['Algorithm'] = algo
-                message = f'Trust region is too small: {radius}'
-                messages['Cause of termination'] = message
-                messages['Number of iterations'] = f'{k+1}'
-                messages['Proportion of Hessian calculation'] = (
-                    the_hybrid_function.message()
-                )
-                logmessage()
-                return OptimizationResults(
-                    solution=iterate, messages=messages, convergence=False
-                )
-
-            status = '-'
-            logmessage()
-            continue
-
         try:
-            function_value_candidate = the_hybrid_function.calculate_function(candidate)
-            num = current_function.function - function_value_candidate
-            step = candidate - iterate
-            denom = -np.inner(step, current_function.gradient) - 0.5 * np.inner(
-                step, current_function.hessian @ step
+            # Solve the quadratic problem in the subspace defined by the GCP
+            candidate, _ = bounds.truncated_conjugate_gradient_subspace(
+                iterate=iterate,
+                gradient=current_function.gradient,
+                hessian=current_function.hessian,
+                radius=radius,
+                tol=conjugate_gradient_tol,
             )
-            rho = num / denom
-            failed = rho < eta1
-            if failed:
-                radius = min(radius / 2.0, np.linalg.norm(step, np.inf) / 2.0)
+            if np.isnan(candidate).any():
+                radius /= 2.0
                 if radius <= min_delta:
                     messages = the_function.messages
                     messages['Algorithm'] = algo
@@ -243,77 +215,121 @@ def simple_bounds_newton_algorithm(
                 status = '-'
                 logmessage()
                 continue
-        except RuntimeError as e:
-            logger.warning(e)
-            radius /= 2.0
-            if radius <= min_delta:
+
+            try:
+                function_value_candidate = the_hybrid_function.calculate_function(
+                    candidate
+                )
+                num = current_function.function - function_value_candidate
+                step = candidate - iterate
+                denom = -np.inner(step, current_function.gradient) - 0.5 * np.inner(
+                    step, current_function.hessian @ step
+                )
+                rho = num / denom
+                failed = rho < eta1
+                if failed:
+                    radius = min(radius / 2.0, np.linalg.norm(step, np.inf) / 2.0)
+                    if radius <= min_delta:
+                        messages = the_function.messages
+                        messages['Algorithm'] = algo
+                        message = f'Trust region is too small: {radius}'
+                        messages['Cause of termination'] = message
+                        messages['Number of iterations'] = f'{k+1}'
+                        messages['Proportion of Hessian calculation'] = (
+                            the_hybrid_function.message()
+                        )
+                        logmessage()
+                        return OptimizationResults(
+                            solution=iterate, messages=messages, convergence=False
+                        )
+
+                    status = '-'
+                    logmessage()
+                    continue
+            except RuntimeError as e:
+                logger.warning(e)
+                radius /= 2.0
+                if radius <= min_delta:
+                    messages = the_function.messages
+                    messages['Algorithm'] = algo
+                    message = f'Trust region is too small: {radius}'
+                    messages['Cause of termination'] = message
+                    messages['Number of iterations'] = f'{k+1}'
+                    messages['Proportion of Hessian calculation'] = (
+                        the_hybrid_function.message()
+                    )
+                    logmessage()
+                    return OptimizationResults(
+                        solution=iterate, messages=messages, convergence=False
+                    )
+                failed = True
+                status = '-'
+                logmessage()
+                continue
+
+            # Candidate accepted
+            try:
+                candidate_function = (
+                    the_hybrid_function.calculate_function_and_derivatives(candidate)
+                )
+            except OptimizationError:
+                # Failure: reduce the trust region
+                radius = min(radius / 2.0, np.linalg.norm(step, np.inf) / 2.0)
+                if radius <= min_delta:
+                    messages = the_function.messages
+                    messages['Algorithm'] = algo
+                    message = f'Trust region is too small: {radius}'
+                    messages['Cause of termination'] = message
+                    messages['Number of iterations'] = f'{k+1}'
+                    messages['Proportion of Hessian calculation'] = (
+                        the_hybrid_function.message()
+                    )
+                    logmessage()
+                    return OptimizationResults(
+                        solution=iterate, messages=messages, convergence=False
+                    )
+                status = '-'
+                logmessage()
+
+                continue
+
+            if candidate_function is None:
+                # the_matrix stopping criterion has been detected
                 messages = the_function.messages
                 messages['Algorithm'] = algo
-                message = f'Trust region is too small: {radius}'
-                messages['Cause of termination'] = message
                 messages['Number of iterations'] = f'{k+1}'
                 messages['Proportion of Hessian calculation'] = (
                     the_hybrid_function.message()
                 )
                 logmessage()
                 return OptimizationResults(
-                    solution=iterate, messages=messages, convergence=False
+                    solution=candidate, messages=messages, convergence=True
                 )
-            failed = True
-            status = '-'
+
+            iterate = candidate
+            current_function = candidate_function
+
+            if rho >= eta2:
+                # Enlarge the trust region
+                radius = min(enlarging_factor * radius, max_delta)
+                status = '++'
+            else:
+                status = '+'
+
             logmessage()
-            continue
-
-        # Candidate accepted
-        try:
-            candidate_function = the_hybrid_function.calculate_function_and_derivatives(
-                candidate
-            )
-        except OptimizationError:
-            # Failure: reduce the trust region
-            radius = min(radius / 2.0, np.linalg.norm(step, np.inf) / 2.0)
-            if radius <= min_delta:
-                messages = the_function.messages
-                messages['Algorithm'] = algo
-                message = f'Trust region is too small: {radius}'
-                messages['Cause of termination'] = message
-                messages['Number of iterations'] = f'{k+1}'
-                messages['Proportion of Hessian calculation'] = (
-                    the_hybrid_function.message()
-                )
-                logmessage()
-                return OptimizationResults(
-                    solution=iterate, messages=messages, convergence=False
-                )
-            status = '-'
-            logmessage()
-
-            continue
-
-        if candidate_function is None:
-            # the_matrix stopping criterion has been detected
+        except KeyboardInterrupt:
             messages = the_function.messages
             messages['Algorithm'] = algo
-            messages['Number of iterations'] = f'{k+1}'
+            messages['Number of iterations'] = f'{k + 1}'
+            message = 'Iterations interrupted by the user'
+            messages['Cause of termination'] = message
             messages['Proportion of Hessian calculation'] = (
                 the_hybrid_function.message()
             )
             logmessage()
             return OptimizationResults(
-                solution=candidate, messages=messages, convergence=True
+                solution=iterate, messages=messages, convergence=False
             )
-
-        iterate = candidate
-        current_function = candidate_function
-
-        if rho >= eta2:
-            # Enlarge the trust region
-            radius = min(enlarging_factor * radius, max_delta)
-            status = '++'
-        else:
-            status = '+'
-
-        logmessage()
 
     the_function.calculate_relative_projected_gradient(bounds)
     messages = the_function.messages
