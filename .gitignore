@@ -2,3 +2,10 @@ build/*
 .tox/*
 .idea/*
 .coverage
+.DS_Store
+dist/*
+*.keep
+src/biogeme_optimization/__pycache__/*
+tests/__pycache__/*
+examples/scripts/__pycache__/*
+*.pareto
