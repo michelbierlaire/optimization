@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "cython"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biogeme-optimization"
+version = "0.0.8"
+description = "Various optimization algorithms for teaching and research"
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [{ name = "Michel Bierlaire", email = "michel.bierlaire@epfl.ch" }]
+classifiers = [
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Cython",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only"
+]
+dependencies = [
+    "numpy>=2.0.0, <3",
+    "scipy>=1.14.0, <2",
+    "matplotlib>=3.9.0, <4",
+    "tomlkit>=0.12.5, <1"
+]
+
+[project.optional-dependencies]
+testing = [
+    "pytest >= 8.2.2",
+    "pytest-cov >= 5.0.0",
+    "tox >= 4.15.1"
+]
+
+[project.urls]
+Code = "https://github.com/michelbierlaire/optimization"
+homepage = "http://biogeme.epfl.ch"
+download-url = "https://pypi.org/project/bierlaire-optimization"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
