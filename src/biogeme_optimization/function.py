@@ -21,9 +21,15 @@ class FunctionData(NamedTuple):
     hessian: np.ndarray | None
 
 
+class CheckDerivativesResults(NamedTuple):
+    analytical: FunctionData
+    finite_differences: FunctionData
+
+
 logger: logging.Logger = logging.getLogger(__name__)
 
 SQRT_EPSILON: float = np.sqrt(np.finfo(np.float64).eps)
+EPSILON: float = float(np.finfo(np.float64).eps)
 
 
 class FunctionToMinimize(ABC):
@@ -317,7 +323,7 @@ class FunctionToMinimize(ABC):
 
     def check_derivatives(
         self, x: np.ndarray, names: list[str] | None = None
-    ) -> tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> CheckDerivativesResults:
         """Verifies the analytical derivatives of a function by comparing
         them with finite difference approximations.
 
@@ -363,7 +369,11 @@ class FunctionToMinimize(ABC):
                     f'{names[row]:15}\t{names[col]:15}\t{h[row,col]:+E}\t'
                     f'{h_num[row,col]:+E}\t{hdiff[row,col]:+E}'
                 )
-        return f, g, h, gdiff, hdiff
+        finite_difference = FunctionData(function=None, gradient=g_num, hessian=h_num)
+        results = CheckDerivativesResults(
+            analytical=evaluation, finite_differences=finite_difference
+        )
+        return results
 
 
 def relative_gradient(
