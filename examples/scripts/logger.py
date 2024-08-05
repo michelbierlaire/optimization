@@ -5,6 +5,7 @@
 
 File setting the logger
 """
+
 import logging
 
 logger = logging.getLogger('biogeme_optimization')

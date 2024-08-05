@@ -9,6 +9,7 @@ Class in charge of the management of bound constraints
 from __future__ import annotations
 import logging
 import numpy as np
+
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.diagnostics import ConjugateGradientDiagnostic
 
@@ -668,10 +669,16 @@ class Bounds:
             raise OptimizationError(
                 f'Incompatible size: {len(g_current)}' f' and {self.dimension}'
             )
+        if np.isnan(g_current).any():
+            raise OptimizationError(f'Invalid gradient: {g_current}')
+
         if h_current.shape[0] != self.dimension or h_current.shape[1] != self.dimension:
             raise OptimizationError(
                 f'Incompatible size: {h_current.shape}' f' and {self.dimension}'
             )
+
+        if np.isnan(h_current).any():
+            raise OptimizationError(f'Invalid hessian: {h_current}')
 
         if not self.feasible(x_current):
             raise OptimizationError(
@@ -700,11 +707,11 @@ class Bounds:
             # Calculate the maximum step that can be done in the current direction
             delta_t, _ = self.maximum_step(x, direction)
             # Test whether the GCP has been found
-            ratio = -fprime / f_second
-
-            if f_second > 0 and 0 < ratio < delta_t:
-                x = x + ratio * direction
-                return x
+            if f_second > 0:
+                ratio = -fprime / f_second
+                if 0 < ratio < delta_t:
+                    x = x + ratio * direction
+                    return x
 
             # In theory, x + delta_t * direction must be feasible. However,
             # there may be some numerical problem. Therefore, we
