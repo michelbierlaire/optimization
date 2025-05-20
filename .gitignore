@@ -12,3 +12,4 @@ examples/stochastic/__pycache__/*
 *.pareto
 examples/stochastic/.ipynb_checkpoints/ols_star-checkpoint.ipynb
 examples/stochastic/ols_star.ipynb
+/src/biogeme_optimization.egg-info
