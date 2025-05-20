@@ -14,13 +14,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.13'
       - name: Install build dependencies
         run: python -m pip install --upgrade pip build
       - name: Build source distribution
         run: python -m build --sdist --outdir dist/
       - name: Upload Source Distribution Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: sdist
           path: dist/*.tar.gz
@@ -31,7 +31,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
@@ -45,7 +45,7 @@ jobs:
     - name: Check directory
       run: ls dist
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: wheels
         path: dist/biogeme_optimization*.whl
@@ -61,13 +61,13 @@ jobs:
       id-token: write
     steps:
       - name: Download Wheel Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v2
         with:
           name: wheels
           path: dist
 
       - name: Download sdist Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v2
         with:
           name: sdist
           path: dist
