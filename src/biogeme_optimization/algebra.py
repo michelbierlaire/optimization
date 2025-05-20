@@ -10,15 +10,15 @@ import logging
 import numpy as np
 import scipy.linalg as la
 from biogeme_optimization.exceptions import OptimizationError
-
+from biogeme_optimization.floating_point import MACHINE_EPSILON, NUMPY_FLOAT
 
 logger = logging.getLogger(__name__)
 
 
 def schnabel_eskow(
     the_matrix: np.ndarray,
-    tau: float = np.finfo(np.float64).eps ** 0.3333,
-    taubar: float = np.finfo(np.float64).eps ** 0.6666,
+    tau: float = MACHINE_EPSILON ** 0.3333,
+    taubar: float = MACHINE_EPSILON ** 0.6666,
     mu: float = 0.1,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Modified Cholesky factorization by `Schnabel and Eskow (1999)`_.
@@ -69,7 +69,7 @@ def schnabel_eskow(
         the_matrix[:, [i, j]] = the_matrix[:, [j, i]]
         permutation_matrix[:, [i, j]] = permutation_matrix[:, [j, i]]
 
-    the_matrix = the_matrix.astype(np.float64)
+    the_matrix = the_matrix.astype(NUMPY_FLOAT)
     dim = the_matrix.shape[0]
     if the_matrix.shape[1] != dim:
         raise OptimizationError('The matrix must be square')
@@ -77,7 +77,7 @@ def schnabel_eskow(
     if not np.array_equal(the_matrix, the_matrix.T):
         raise OptimizationError('The matrix must be square and symmetric')
 
-    diagonal_matrix = np.zeros(dim, dtype=np.float64)
+    diagonal_matrix = np.zeros(dim, dtype=NUMPY_FLOAT)
     permutation_matrix = np.identity(dim)
     phase_one = True
     gamma = abs(the_matrix.diagonal()).max()

@@ -1,7 +1,7 @@
 [build-system]
 requires = [
-    "setuptools>=70.1.1",
-    "wheel>=0.43.0",
+    "setuptools>=75.6.0",
+    "wheel>=0.45.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -25,17 +25,17 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only"
 ]
 dependencies = [
-    "numpy>=2.0.0, <3",
-    "scipy>=1.14.0, <2",
-    "matplotlib>=3.9.0, <4",
-    "tomlkit>=0.12.5, <1"
+    "numpy>=2.2.6, <3",
+    "scipy>=1.15.3, <2",
+    "matplotlib>=3.10.3, <4",
+    "tomlkit>=0.13.2, <1"
 ]
 
 [project.optional-dependencies]
 testing = [
-    "pytest >= 8.2.2",
-    "pytest-cov >= 5.0.0",
-    "tox >= 4.15.1"
+    "pytest >= 8.3.5",
+    "pytest-cov >= 6.1.1",
+    "tox >= 4.26.0"
 ]
 
 [project.urls]

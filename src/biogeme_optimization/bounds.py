@@ -12,6 +12,8 @@ import numpy as np
 
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.diagnostics import ConjugateGradientDiagnostic
+from biogeme_optimization import floating_point
+from biogeme_optimization.floating_point import MACHINE_EPSILON
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -832,7 +834,7 @@ class Bounds:
         gradient: np.ndarray,
         hessian: np.ndarray,
         radius: float,
-        tol: float = np.finfo(np.float64).eps ** 0.3333,
+        tol: float = MACHINE_EPSILON ** 0.3333,
     ) -> tuple[np.ndarray, ConjugateGradientDiagnostic]:
         """Find an approximation of the solution of the trust region
         subproblem using the truncated conjugate gradient method within

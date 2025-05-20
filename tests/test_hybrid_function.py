@@ -13,7 +13,7 @@ import numpy as np
 from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.function import FunctionData
 from biogeme_optimization.hybrid_function import HybridFunction
-from examples import MyFunctionToMinimize
+from .examples import MyFunctionToMinimize
 
 
 class TestHybridFunction(unittest.TestCase):

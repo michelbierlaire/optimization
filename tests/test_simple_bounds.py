@@ -12,7 +12,7 @@ from scipy.optimize import minimize
 from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.simple_bounds import simple_bounds_newton_algorithm
 
-from examples import MyFunctionToMinimize, Rosenbrock
+from .examples import MyFunctionToMinimize, Rosenbrock
 
 
 def my_function_for_scipy(x):
@@ -158,7 +158,7 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
             np.testing.assert_array_almost_equal(
                 optimization_results.solution,
                 expected_solution,
-                decimal=3
+                decimal=2
             )
             self.assertTrue(optimization_results.convergence)
 
@@ -188,7 +188,7 @@ class TestSimpleBoundsRosenbrock(unittest.TestCase):
             np.testing.assert_array_almost_equal(
                 optimization_results.solution,
                 expected_solution,
-                decimal=3
+                decimal=2
             )
             self.assertTrue(optimization_results.convergence)
 

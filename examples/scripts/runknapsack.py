@@ -11,10 +11,12 @@ and maximizing utility.
 
 from itertools import product
 from biogeme_optimization import vns
-import biogeme_optimization.logging as blog
-from knapsack import Knapsack, Sack
 
-logger = blog.get_screen_logger(level=blog.INFO)
+import logging
+
+from knapsack import Knapsack, Sack
+from logger import logger
+
 logger.info('Example runknapsack.py')
 
 UTILITY = [80, 31, 48, 17, 27, 84, 34, 39, 46, 58, 23, 67]

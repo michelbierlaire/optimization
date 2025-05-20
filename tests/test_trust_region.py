@@ -25,7 +25,7 @@ from biogeme_optimization.trust_region import (
     NewtonModel,
     BfgsModel,
 )
-from examples import MyFunctionToMinimize, Example58, Rosenbrock
+from .examples import MyFunctionToMinimize, Example58, Rosenbrock
 
 
 class TrustRegionIntersectionTest(unittest.TestCase):

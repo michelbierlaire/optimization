@@ -7,11 +7,12 @@ Class for the hybrid function calculation, that mixed analytical hessian and BFG
 """
 
 import logging
+
 import numpy as np
 
+from biogeme_optimization.bfgs import bfgs
 from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.function import FunctionData, FunctionToMinimize
-from biogeme_optimization.bfgs import bfgs
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -152,17 +153,6 @@ class HybridFunction:
 
         # If there is a numerical problem with the
         # Hessian, we apply BFGS
-
-        if np.linalg.norm(function_data.hessian) > 1.0e100:
-            self.number_of_numerical_issues += 1
-            logger.warning(
-                f'Numerical problem with the second '
-                f'derivative matrix. '
-                f'Norm = {np.linalg.norm(function_data.hessian)}. '
-                f'Replaced by the BFGS approximation.'
-            )
-            return self._calculate_function_and_derivatives_bfgs(iterate)
-
         return function_data
 
     def message(self) -> str:

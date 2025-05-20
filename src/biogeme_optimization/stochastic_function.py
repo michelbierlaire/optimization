@@ -12,6 +12,7 @@ from typing import final, NamedTuple
 import numpy as np
 
 from biogeme_optimization.bounds import Bounds
+from biogeme_optimization.floating_point import MACHINE_EPSILON
 
 
 class BatchFunctionData(NamedTuple):
@@ -32,7 +33,7 @@ class StochasticFunction(ABC):
 
     def __init__(
         self,
-        epsilon: float = np.finfo(np.float64).eps ** 0.3333,
+        epsilon: float = MACHINE_EPSILON ** 0.3333,
         step_tol: float = 1.0e-5,
     ):
         """Constructor

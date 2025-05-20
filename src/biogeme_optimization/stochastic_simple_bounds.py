@@ -9,6 +9,7 @@ Functions for the trust region algorithm with simple bounds for stochastic funct
 import logging
 import numpy as np
 from biogeme_optimization.exceptions import OptimizationError
+from biogeme_optimization.floating_point import MACHINE_EPSILON
 from biogeme_optimization.hybrid_function import HybridFunction
 from biogeme_optimization.format import Column, FormattedColumns
 
@@ -23,7 +24,7 @@ def simple_bounds_newton_algorithm(
     variable_names=None,
     proportion_analytical_hessian=1.0,
     first_radius=1.0,
-    cgtol=np.finfo(np.float64).eps ** 0.3333,
+    cgtol=MACHINE_EPSILON ** 0.3333,
     maxiter=1000,
     eta1=0.01,
     eta2=0.9,

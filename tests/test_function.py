@@ -10,7 +10,7 @@ import unittest
 import numpy as np
 
 from biogeme_optimization.function import relative_gradient
-from examples import MyFunctionToMinimize, Example58, Rosenbrock
+from .examples import MyFunctionToMinimize, Example58, Rosenbrock
 
 
 class RelativeGradientTestCase(unittest.TestCase):

@@ -14,6 +14,8 @@ import numpy as np
 
 from biogeme_optimization.bounds import Bounds
 
+from biogeme_optimization.floating_point import MACHINE_EPSILON, MAX_FLOAT
+
 
 class FunctionData(NamedTuple):
     function: float | None
@@ -28,8 +30,8 @@ class CheckDerivativesResults(NamedTuple):
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-SQRT_EPSILON: float = np.sqrt(np.finfo(np.float64).eps)
-EPSILON: float = float(np.finfo(np.float64).eps)
+SQRT_EPSILON: float = np.sqrt(MACHINE_EPSILON)
+EPSILON: float = float(MACHINE_EPSILON)
 
 
 class FunctionToMinimize(ABC):
@@ -51,35 +53,21 @@ class FunctionToMinimize(ABC):
             between two successive iterates is less than steptol, the
             iterations should be interrupted.
         :type  steptol: float
-
         """
         self.epsilon = (
-            np.finfo(np.float64).eps ** 0.3333 if epsilon is None else epsilon
+            MACHINE_EPSILON ** 0.3333 if epsilon is None else epsilon
         )
         self.steptol = 1.0e-5 if steptol is None else steptol
-        self.reset()
-
-    @final
-    def reset(self) -> None:
-        """Erase all stored values"""
-        self.stored_values: dict[bytes, float] = {}
-        self.stored_gradient: dict[bytes, FunctionData] = {}
-        self.stored_hessian: dict[bytes, FunctionData] = {}
         self.x: np.ndarray | None = None
         self.x_bytes: bytes | None = None
         self.typx: np.ndarray | None = None
         self.typf: float | None = None
         self.relative_gradient_norm: float | None = None
         self.messages: dict[str, str | float | int] = {}
+        self.number_of_functions: int = 0
+        self.number_of_gradients: int = 0
+        self.number_of_hessians: int = 0
 
-    @final
-    def needs_reset(self) -> bool:
-        """Checks if the function needs to be reset
-
-        :return: True if calculated values of the function are stored
-        :rtype: bool
-        """
-        return bool(self.stored_values)
 
     @abstractmethod
     def dimension(self) -> int:
@@ -177,16 +165,13 @@ class FunctionToMinimize(ABC):
 
     @final
     def f(self) -> float:
-        """Retrieve or calculate the canonical_value of the function
+        """Retrieve the canonical_value of the function
 
         :return: canonical_value of the function
         :rtype: float
         """
-        value = self.stored_values.get(self.x_bytes)
-        if value is None:
-            value = self._f()
-            self.stored_values[self.x_bytes] = value
-        return value
+        self.number_of_functions += 1
+        return self._f()
 
     @abstractmethod
     def _f(self) -> float:
@@ -198,17 +183,14 @@ class FunctionToMinimize(ABC):
 
     @final
     def f_g(self) -> FunctionData:
-        """Retrieve or calculate the canonical_value of the function and the gradient
+        """Retrieve the canonical_value of the function and the gradient
 
         :return: canonical_value of the function and the gradient
         :rtype: FunctionData
         """
-        function_data = self.stored_gradient.get(self.x_bytes)
-        if function_data is None:
-            function_data = self._f_g()
-            self.stored_gradient[self.x_bytes] = function_data
-            self.stored_values[self.x_bytes] = function_data.function
-        return function_data
+        self.number_of_functions += 1
+        self.number_of_gradients += 1
+        return self._f_g()
 
     @abstractmethod
     def _f_g(self) -> FunctionData:
@@ -220,18 +202,15 @@ class FunctionToMinimize(ABC):
 
     @final
     def f_g_h(self) -> FunctionData:
-        """Calculate the canonical_value of the function, the gradient and the Hessian
+        """Retrieve the canonical_value of the function, the gradient and the Hessian
 
         :return: canonical_value of the function, the gradient and the Hessian
         :rtype: FunctionData
         """
-        function_data = self.stored_hessian.get(self.x_bytes)
-        if function_data is None:
-            function_data = self._f_g_h()
-            self.stored_hessian[self.x_bytes] = function_data
-            self.stored_gradient[self.x_bytes] = function_data
-            self.stored_values[self.x_bytes] = function_data.function
-        return function_data
+        self.number_of_functions += 1
+        self.number_of_gradients += 1
+        self.number_of_hessians += 1
+        return self._f_g_h()
 
     @abstractmethod
     def _f_g_h(self) -> FunctionData:
@@ -243,18 +222,18 @@ class FunctionToMinimize(ABC):
 
     @final
     def nbr_function_evaluations(self) -> int:
-        """Obtain the total number of function evaluations"""
-        return len(self.stored_values)
+        """Obtain the total number of function evaluations (caching disabled)"""
+        return self.number_of_functions
 
     @final
     def nbr_gradient_evaluations(self) -> int:
-        """Obtain the total number of gradient evaluations"""
-        return len(self.stored_gradient)
+        """Obtain the total number of gradient evaluations (caching disabled)"""
+        return self.number_of_gradients
 
     @final
     def nbr_hessian_evaluations(self) -> int:
-        """Obtain the total number of hessian evaluations"""
-        return len(self.stored_hessian)
+        """Obtain the total number of hessian evaluations (caching disabled)"""
+        return self.number_of_hessians
 
     def finite_differences_gradient(self, x: np.ndarray) -> np.ndarray:
         """Calculates the gradient of the function using finite differences
@@ -447,4 +426,4 @@ def relative_change(x: np.ndarray, x_previous: np.ndarray, typx: np.ndarray) -> 
     if np.isfinite(result):
         return result
 
-    return float(np.finfo(float).max)
+    return float(MAX_FLOAT)
