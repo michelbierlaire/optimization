@@ -1,7 +1,7 @@
 """Sets the type of floating point used the algorithms.
 
 Michel Bierlaire
-Tue May 20 2025, 09:54:48
+Tue May 20 2025, 18:09:55
 """
 import logging
 import os

@@ -7,17 +7,15 @@ Functions for the trust region algorithm with simple bounds
 """
 
 import logging
-import numpy as np
 
+import numpy as np
 from biogeme_optimization.bounds import Bounds
+from biogeme_optimization.diagnostics import OptimizationResults
 from biogeme_optimization.exceptions import OptimizationError
 from biogeme_optimization.floating_point import MACHINE_EPSILON
+from biogeme_optimization.format import Column, FormattedColumns
 from biogeme_optimization.function import FunctionToMinimize
 from biogeme_optimization.hybrid_function import HybridFunction
-from biogeme_optimization.format import Column, FormattedColumns
-from biogeme_optimization.diagnostics import OptimizationResults
-
-from biogeme_optimization import floating_point
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +28,7 @@ def simple_bounds_newton_algorithm(
     variable_names: list[str] | None = None,
     proportion_analytical_hessian: float = 1.0,
     first_radius: float = 1.0,
-    conjugate_gradient_tol: float = MACHINE_EPSILON ** 0.3333,
+    conjugate_gradient_tol: float = MACHINE_EPSILON**0.3333,
     maxiter: int = 1000,
     eta1: float = 0.01,
     eta2: float = 0.9,
@@ -107,7 +105,6 @@ def simple_bounds_newton_algorithm(
             'Initial point not feasible. '
             'It will be projected onto the feasible domain.'
         )
-
 
     # Establish the name of the algorithm, for reporting
 

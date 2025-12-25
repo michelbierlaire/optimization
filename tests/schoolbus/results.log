@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/Users/bierlair/Library/CloudStorage/OneDrive-epfl.ch/github/optimization/tests/schoolbus/test_school_bus.py", line 14, in <module>
+    from biogeme_optimization.school_bus.pareto_report import html_report
+  File "/Users/bierlair/Library/CloudStorage/OneDrive-epfl.ch/github/optimization/src/biogeme_optimization/school_bus/pareto_report.py", line 1, in <module>
+    import dominate
+ModuleNotFoundError: No module named 'dominate'

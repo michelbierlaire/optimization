@@ -8,12 +8,10 @@ Abstract class for the function to minimize
 
 import logging
 from abc import ABC, abstractmethod
-from typing import final, NamedTuple
+from typing import NamedTuple, final
 
 import numpy as np
-
 from biogeme_optimization.bounds import Bounds
-
 from biogeme_optimization.floating_point import MACHINE_EPSILON, MAX_FLOAT
 
 
@@ -54,9 +52,7 @@ class FunctionToMinimize(ABC):
             iterations should be interrupted.
         :type  steptol: float
         """
-        self.epsilon = (
-            MACHINE_EPSILON ** 0.3333 if epsilon is None else epsilon
-        )
+        self.epsilon = MACHINE_EPSILON**0.3333 if epsilon is None else epsilon
         self.steptol = 1.0e-5 if steptol is None else steptol
         self.x: np.ndarray | None = None
         self.x_bytes: bytes | None = None
@@ -67,7 +63,6 @@ class FunctionToMinimize(ABC):
         self.number_of_functions: int = 0
         self.number_of_gradients: int = 0
         self.number_of_hessians: int = 0
-
 
     @abstractmethod
     def dimension(self) -> int:
