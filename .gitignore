@@ -13,3 +13,5 @@ examples/stochastic/__pycache__/*
 examples/stochastic/.ipynb_checkpoints/ols_star-checkpoint.ipynb
 examples/stochastic/ols_star.ipynb
 /src/biogeme_optimization.egg-info
+examples/clement.zip
+examples/Multiobjective knapsack problem.ipynb.zip
