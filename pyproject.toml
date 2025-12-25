@@ -25,10 +25,12 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only"
 ]
 dependencies = [
-    "numpy>=2.2.6, <3",
-    "scipy>=1.15.3, <2",
-    "matplotlib>=3.10.3, <4",
-    "tomlkit>=0.13.2, <1"
+    "numpy>=2.0.2, <3",
+    "scipy>=1.13.1, <2",
+    "matplotlib>=3.9.4, <4",
+    "tomlkit>=0.13.2, <1",
+    "lark>=1.2.2",
+    "tabulate>=0.9.0"
 ]
 
 [project.optional-dependencies]
