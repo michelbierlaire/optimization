@@ -9,9 +9,9 @@ File setting the logger
 import logging
 
 logger = logging.getLogger('biogeme_optimization')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('[%(levelname)s] %(message)s ')
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
+stream_handler.setLevel(logging.INFO)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
