@@ -67,7 +67,11 @@ class TestDecisionEncoding(unittest.TestCase):
         )
         self.assertEqual(the_code, expected_code)
         parsed = BusToToursAssignment.from_code(the_code)
-        self.assertDictEqual(tour_bus_assignment.assignment, parsed.assignment)
+        # The compact code stores only bus/tour pairs. Empty buses are restored
+        # by Solution.update_buses when the problem's buses are available.
+        self.assertDictEqual(
+            {'bus_1': ['tour_1', 'tour_2']}, parsed.assignment
+        )
 
     def test_solution(self):
         children_group_1 = ChildrenGroup(

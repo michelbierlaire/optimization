@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime
+from unittest.mock import patch
 
 from icecream import ic
 
@@ -322,7 +323,13 @@ class TestSplitTourIntegration(unittest.TestCase):
             raise ValueError(msg)
 
     def test_split_tour_real_functionality(self):
-        new_element, changes = split_tour(self.element, size=1)
+        # T1 is the only tour in this fixture that can be split. Force the
+        # length-based ordering so the test does not depend on random state.
+        with patch(
+            'biogeme_optimization.school_bus.operators.random.random',
+            return_value=0.0,
+        ):
+            new_element, changes = split_tour(self.element, size=1)
         self.assertEqual(changes, 1)
 
         new_solution = ElementSolution.from_code(new_element.element_id).the_solution
@@ -420,6 +427,12 @@ class TestMoveTourToAnotherBus(unittest.TestCase):
         ic(old_assignments)
         self.assertNotEqual(assignments, old_assignments)
 
+    def test_move_tour_to_another_bus_rejects_oversized_request(self):
+        new_element, changes = move_tour_to_another_bus(self.element, size=3)
+
+        self.assertEqual(changes, 0)
+        self.assertEqual(new_element, self.element)
+
 
 class TestMergeGroups(unittest.TestCase):
     def setUp(self):
@@ -494,9 +507,14 @@ class TestMergeGroups(unittest.TestCase):
             expected_group_assignment, new_solution.group_to_tour.assignment
         )
 
-        expected_bus_assignment = {'bus1': ['Merged tour 1'], 'bus2': ['Merged tour 1']}
-        self.assertDictEqual(
-            expected_bus_assignment, new_solution.bus_to_tours.assignment
+        assignments = new_solution.bus_to_tours.assignment
+        assigned_buses = {
+            bus for bus, tours in assignments.items() if 'Merged tour 1' in tours
+        }
+        self.assertEqual(len(assigned_buses), 1)
+        self.assertEqual(
+            sum(tours.count('Merged tour 1') for tours in assignments.values()),
+            1,
         )
 
         expected_tours = {'Merged tour 1'}

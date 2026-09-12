@@ -6,14 +6,17 @@
 Classes for algorithm diagnostics
 """
 
-import numpy as np
 from enum import Enum, auto
 from typing import NamedTuple
 
+import numpy as np
+
 
 class OptimizationResults(NamedTuple):
+    """Typed result returned by the public optimization entry points."""
+
     solution: np.ndarray
-    messages: dict[str, str]
+    messages: dict[str, object]
     convergence: bool
 
 

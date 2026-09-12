@@ -55,7 +55,7 @@ class Stop:
             return self.origin.name
         if self.school is None:
             raise ValueError(
-                f'The stop has not been initialized properly. It is neither an origin or a destination'
+                'The stop has not been initialized properly. It is neither an origin or a destination'
             )
         return self.school.name
 
@@ -270,7 +270,7 @@ class TimeTable:
             for key, value in the_dict.items()
         )
 
-    def generate_buses_timetable(self, table_format='simple') -> dict[str, str]:
+    def generate_buses_timetable(self, table_format='simple') -> dict[str, str | None]:
         """Generates the timetable for all buses"""
 
         result = {}
@@ -301,8 +301,21 @@ class TimeTable:
             result[bus.name] = tabulate(rows, headers=headers, tablefmt=table_format)
 
         if all(value is None for value in result.values()):
-            raise ValueError(f'No bus timetable has been generated')
+            raise ValueError('No bus timetable has been generated')
         return result
+
+    def print_buses_timetable(self, table_format='simple') -> str:
+        """Return all generated bus timetables as a printable string.
+
+        This method keeps the historical ``print_buses_timetable`` API while
+        delegating timetable generation to :meth:`generate_buses_timetable`.
+        """
+        schedules = self.generate_buses_timetable(table_format=table_format)
+        sections = []
+        for bus_name, schedule in schedules.items():
+            if schedule is not None:
+                sections.extend((bus_name, '~' * len(bus_name), schedule))
+        return '\n'.join(sections)
 
     def print_time_performance(self, table_format='simple') -> str:
         if not self.time_performance_calculated:
@@ -369,18 +382,15 @@ class TimeTable:
                 performance.boarding_time, performance.alighting_time
             )
             self._total_travel_time += travel_time * group.group_size
-            if travel_time > self._maximum_travel_time:
-                self._maximum_travel_time = travel_time
+            self._maximum_travel_time = max(self._maximum_travel_time, travel_time)
 
             time_early = max(performance.arrival_time_deviation, 0)
             self._total_early_arrivals += time_early * group.group_size
-            if time_early > self._maximum_early_arrivals:
-                self._maximum_early_arrivals = time_early
+            self._maximum_early_arrivals = max(self._maximum_early_arrivals, time_early)
 
             time_late = max(-performance.arrival_time_deviation, 0)
             self._total_late_arrivals += time_late * group.group_size
-            if time_late > self._maximum_late_arrivals:
-                self._maximum_late_arrivals = time_late
+            self._maximum_late_arrivals = max(self._maximum_late_arrivals, time_late)
 
     def print_main_indicators(self, table_format: str = 'plain'):
         rows = [

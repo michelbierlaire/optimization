@@ -3,6 +3,33 @@
 
 Various optimization algorithms used for teaching and research. In particular, they are used by Biogeme.
 
+## Biogeme-facing optimizer API
+
+The optimizer can be installed and used without installing the full `biogeme`
+distribution:
+
+```bash
+uv add biogeme-optimization
+```
+
+The canonical imports are:
+
+```python
+from biogeme_optimization.function import FunctionToMinimize
+from biogeme_optimization.optimization import bfgs_trust_region_for_biogeme
+```
+
+`bfgs_trust_region_for_biogeme` accepts an objective, a one-dimensional NumPy
+initial vector, one bound pair and variable name per parameter, and an options
+mapping containing `maxiter`, `tolerance`, and `objective_tolerance`. It returns
+a typed result with `solution`, `convergence`, and `messages` attributes.
+
+The trust-region BFGS path requires only objective and gradient evaluation;
+implementing a Hessian is optional. The historical `bounds` argument remains
+part of the API, although this particular legacy trust-region BFGS algorithm
+does not enforce finite bounds. The package does not import or depend on the
+full `biogeme` distribution.
+
 The package contains the following modules:
 
 ## algebra

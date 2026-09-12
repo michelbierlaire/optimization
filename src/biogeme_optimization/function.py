@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from typing import NamedTuple, final
 
 import numpy as np
+
 from biogeme_optimization.bounds import Bounds
 from biogeme_optimization.floating_point import MACHINE_EPSILON, MAX_FLOAT
 
@@ -159,8 +160,11 @@ class FunctionToMinimize(ABC):
         self.x_bytes = x.tobytes()
 
     @final
-    def f(self) -> float:
+    def f(self, batch: object | None = None) -> float:
         """Retrieve the canonical_value of the function
+
+        ``batch`` is accepted for compatibility with objective protocols used
+        by Biogeme. Deterministic objectives may ignore it.
 
         :return: canonical_value of the function
         :rtype: float
@@ -168,17 +172,20 @@ class FunctionToMinimize(ABC):
         self.number_of_functions += 1
         return self._f()
 
-    @abstractmethod
     def _f(self) -> float:
         """Calculate the canonical_value of the function
 
         :return: canonical_value of the function
         :rtype: float
         """
+        raise NotImplementedError('The objective must implement _f().')
 
     @final
-    def f_g(self) -> FunctionData:
+    def f_g(self, batch: object | None = None) -> FunctionData:
         """Retrieve the canonical_value of the function and the gradient
+
+        ``batch`` is accepted for compatibility with objective protocols used
+        by Biogeme. Deterministic objectives may ignore it.
 
         :return: canonical_value of the function and the gradient
         :rtype: FunctionData
@@ -187,17 +194,21 @@ class FunctionToMinimize(ABC):
         self.number_of_gradients += 1
         return self._f_g()
 
-    @abstractmethod
     def _f_g(self) -> FunctionData:
         """Calculate the canonical_value of the function and the gradient
 
         :return: canonical_value of the function and the gradient
         :rtype: FunctionData
         """
+        raise NotImplementedError('The objective must implement _f_g().')
 
     @final
-    def f_g_h(self) -> FunctionData:
+    def f_g_h(self, batch: object | None = None) -> FunctionData:
         """Retrieve the canonical_value of the function, the gradient and the Hessian
+
+        ``batch`` is accepted for compatibility with objective protocols used
+        by Biogeme. The Hessian is optional for algorithms such as
+        trust-region BFGS.
 
         :return: canonical_value of the function, the gradient and the Hessian
         :rtype: FunctionData
@@ -207,13 +218,16 @@ class FunctionToMinimize(ABC):
         self.number_of_hessians += 1
         return self._f_g_h()
 
-    @abstractmethod
     def _f_g_h(self) -> FunctionData:
         """Calculate the canonical_value of the function, the gradient and the Hessian
 
         :return: canonical_value of the function, the gradient and the Hessian
         :rtype: FunctionData
         """
+        raise NotImplementedError(
+            'This objective does not provide a Hessian. '
+            'Use an algorithm that only requires f_g().'
+        )
 
     @final
     def nbr_function_evaluations(self) -> int:
@@ -323,7 +337,6 @@ class FunctionToMinimize(ABC):
         x = np.array(x, dtype=float)
         self.set_variables(x)
         evaluation = self.f_g_h()
-        f = evaluation.function
         g = evaluation.gradient
         h = evaluation.hessian
         g_num = self.finite_differences_gradient(x)

@@ -15,3 +15,7 @@ examples/stochastic/ols_star.ipynb
 /src/biogeme_optimization.egg-info
 examples/clement.zip
 examples/Multiobjective knapsack problem.ipynb.zip
+/src/biogeme_optimization/school_bus/__pycache__
+/src/biogeme_optimization/school_bus/__pycache__
+/tests/schoolbus/__pycache__
+/src/biogeme_optimization/school_bus/__pycache__

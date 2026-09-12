@@ -18,6 +18,7 @@ from itertools import islice
 from icecream import ic
 
 from biogeme_optimization.pareto import SetElement
+
 from .decision_variables import (
     BusToToursAssignment,
     ChildrenGroup,
@@ -183,6 +184,11 @@ def improve_tour_maximum_late_arrivals(
 
 @log_function_call
 def split_tour(element: SetElement, size: int = 1) -> tuple[SetElement | None, int]:
+    """Split up to ``size`` tours that contain multiple groups.
+
+    The order in which tours are considered is intentionally stochastic. Tests
+    and callers that need a particular tour should control the random source.
+    """
     current_element_solution = ElementSolution.from_code(element.element_id)
     current_solution = current_element_solution.the_solution
     sorted_list_of_tours: list[Tour] = list(current_solution.set_of_tours)
@@ -287,7 +293,7 @@ def merge_groups(element: SetElement, size: int = 1) -> tuple[SetElement | None,
     groups_name = {group.the_id for group in groups}
     merged_list_of_nodes = generate_tour_for_groups(groups=groups)
     merge_tour_id = current_solution.generate_unique_tour_id()
-    if merge_tour_id in current_solution.tour_from_id.keys():
+    if merge_tour_id in current_solution.tour_from_id:
         error = f'Id {merge_tour_id} is already used.'
         raise ValueError(error)
 
@@ -325,10 +331,16 @@ def merge_groups(element: SetElement, size: int = 1) -> tuple[SetElement | None,
 def move_tour_to_another_bus(
     element: SetElement, size: int = 1
 ) -> tuple[SetElement | None, int]:
+    """Move up to ``size`` tours to another bus when possible."""
     current_element_solution = ElementSolution.from_code(element.element_id)
     current_solution = current_element_solution.the_solution
-    if len(current_solution.bus_to_tours.assignment) == 1:
-        """There is only one bus. No modification is possible"""
+    number_of_tours = len(current_solution.set_of_tours)
+    if (
+        len(current_solution.bus_to_tours.assignment) == 1
+        or size <= 0
+        or size > number_of_tours
+    ):
+        """There is only one bus, or the requested move is not possible."""
         return element, 0
     tours_to_change = random.sample(list(current_solution.set_of_tours), size)
     for tour in tours_to_change:
