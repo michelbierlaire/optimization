@@ -2,3 +2,7 @@
 used for research and teaching
 
 """
+
+from biogeme_optimization.state import CheckpointError, TrustRegionBFGSState
+
+__all__ = ["CheckpointError", "TrustRegionBFGSState"]

@@ -9,3 +9,7 @@
 
 class OptimizationError(Exception):
     """Defines a generic exception ."""
+
+
+class CheckpointError(OptimizationError):
+    """Raised when a trust-region optimizer checkpoint is invalid or fails."""

@@ -30,6 +30,24 @@ part of the API, although this particular legacy trust-region BFGS algorithm
 does not enforce finite bounds. The package does not import or depend on the
 full `biogeme` distribution.
 
+## Resumable trust-region BFGS
+
+The Biogeme-facing trust-region BFGS entry point accepts a
+`TrustRegionBFGSState` through `state=` and returns the final state as
+`result.state`. State schema version 1 records the current objective and
+gradient, BFGS approximation, model history, trust-region radius, cumulative
+iteration/evaluation counters, convergence status, objective scaling, and the
+algorithm options. `state.to_dict()` is JSON-compatible; `state.to_npz()` and
+`TrustRegionBFGSState.from_npz()` provide an efficient binary representation
+for large Hessian matrices.
+
+`checkpoint_callback` receives a deep immutable snapshot after initialization,
+after every rejected or accepted trust-region boundary, and immediately before
+convergence, interruption, or an iteration-limit return. `stop_requested()`
+can request a resumable `checkpoint_requested` return. Existing calls without
+state retain the legacy numerical behavior, and the optimizer requires only
+the objective/gradient protocol; the full `biogeme` package is not required.
+
 The package contains the following modules:
 
 ## algebra

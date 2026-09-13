@@ -7,8 +7,9 @@ They deliberately depend only on modules in :mod:`biogeme_optimization`.
 
 from __future__ import annotations
 
+import hashlib
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from numbers import Integral
 from typing import Any
 
@@ -17,6 +18,7 @@ import numpy as np
 from biogeme_optimization.diagnostics import OptimizationResults
 from biogeme_optimization.floating_point import MACHINE_EPSILON
 from biogeme_optimization.function import FunctionToMinimize
+from biogeme_optimization.state import TrustRegionBFGSState
 from biogeme_optimization.trust_region import bfgs_trust_region
 
 logger = logging.getLogger(__name__)
@@ -59,9 +61,15 @@ def _validate_inputs(
     initial_values: object,
     bounds: Sequence[tuple[float | None, float | None]],
     variable_names: Sequence[str],
+    *,
+    preserve_dtype: bool = False,
 ) -> tuple[np.ndarray, list[tuple[float | None, float | None]], list[str]]:
     """Validate the common Biogeme optimizer inputs."""
-    initial = np.asarray(initial_values, dtype=float)
+    supplied = np.asarray(initial_values)
+    if preserve_dtype and supplied.dtype.kind in 'f':
+        initial = np.array(supplied, copy=True)
+    else:
+        initial = np.asarray(initial_values, dtype=float)
     if initial.ndim != 1:
         raise ValueError('initial_values must be a one-dimensional NumPy array.')
     if not np.all(np.isfinite(initial)):
@@ -137,7 +145,28 @@ def _resolve_options(options: Mapping[str, Any] | None) -> dict[str, Any]:
             raise ValueError('radius must be strictly positive.')
     if 'dogleg' in resolved and not isinstance(resolved['dogleg'], bool):
         raise TypeError('dogleg must be a boolean.')
+    for name in ('eta1', 'eta2'):
+        if name in resolved:
+            resolved[name] = _as_nonnegative_float(name, resolved[name])
+    eta1 = float(resolved.get('eta1', 0.01))
+    eta2 = float(resolved.get('eta2', 0.9))
+    if not eta1 < eta2 or eta2 > 1.0:
+        raise ValueError('options must satisfy 0 <= eta1 < eta2 <= 1.')
+    if 'model_fingerprint' in resolved and (
+        not isinstance(resolved['model_fingerprint'], str)
+        or not resolved['model_fingerprint'].strip()
+    ):
+        raise ValueError('model_fingerprint must be a non-empty string.')
     return resolved
+
+
+def _initial_hessian_fingerprint(value: object) -> str | None:
+    """Return a stable JSON-friendly identity for an optional initial Hessian."""
+    if value is None:
+        return None
+    array = np.asarray(value)
+    digest = hashlib.sha256(np.ascontiguousarray(array).tobytes()).hexdigest()
+    return f'{array.dtype.str}:{array.shape}:{digest}'
 
 
 def bfgs_trust_region_for_biogeme(
@@ -146,6 +175,10 @@ def bfgs_trust_region_for_biogeme(
     bounds: Sequence[tuple[float | None, float | None]],
     variable_names: Sequence[str],
     options: Mapping[str, Any] | None = None,
+    *,
+    state: TrustRegionBFGSState | Mapping[str, object] | None = None,
+    checkpoint_callback: Callable[[TrustRegionBFGSState], object] | None = None,
+    stop_requested: Callable[[], bool] | None = None,
 ) -> OptimizationResults:
     """Minimize an objective using trust-region BFGS.
 
@@ -181,6 +214,7 @@ def bfgs_trust_region_for_biogeme(
         initial_values,
         bounds,
         variable_names,
+        preserve_dtype=state is not None,
     )
 
     if any(lower is not None or upper is not None for lower, upper in resolved_bounds):
@@ -195,6 +229,20 @@ def bfgs_trust_region_for_biogeme(
         # Duck-typed objectives may implement their own stopping rule.
         pass
 
+    algorithm_options: dict[str, object] = {
+        'dogleg': resolved_options.get('dogleg', False),
+        'eta1': resolved_options.get('eta1', 0.01),
+        'eta2': resolved_options.get('eta2', 0.9),
+        'initial_radius': resolved_options.get('radius', 1.0),
+        'tolerance': resolved_options['tolerance'],
+        'objective_tolerance': resolved_options['objective_tolerance'],
+        'init_bfgs_fingerprint': _initial_hessian_fingerprint(
+            resolved_options.get('initBfgs')
+        ),
+    }
+    if 'model_fingerprint' in resolved_options:
+        algorithm_options['model_fingerprint'] = resolved_options['model_fingerprint']
+
     return bfgs_trust_region(
         the_function=function_to_minimize,
         starting_point=initial,
@@ -202,11 +250,19 @@ def bfgs_trust_region_for_biogeme(
         use_dogleg=resolved_options.get('dogleg', False),
         maxiter=resolved_options['maxiter'],
         initial_radius=resolved_options.get('radius', 1.0),
+        eta1=resolved_options.get('eta1', 0.01),
+        eta2=resolved_options.get('eta2', 0.9),
+        state=state,
+        checkpoint_callback=checkpoint_callback,
+        stop_requested=stop_requested,
+        _enable_resumption=True,
+        _algorithm_options=algorithm_options,
     )
 
 
 __all__ = [
     'OptimizationResult',
     'OptimizationResults',
+    'TrustRegionBFGSState',
     'bfgs_trust_region_for_biogeme',
 ]

@@ -11,6 +11,8 @@ from typing import NamedTuple
 
 import numpy as np
 
+from biogeme_optimization.state import TrustRegionBFGSState
+
 
 class OptimizationResults(NamedTuple):
     """Typed result returned by the public optimization entry points."""
@@ -18,6 +20,7 @@ class OptimizationResults(NamedTuple):
     solution: np.ndarray
     messages: dict[str, object]
     convergence: bool
+    state: TrustRegionBFGSState | None = None
 
 
 class Diagnostic(Enum):

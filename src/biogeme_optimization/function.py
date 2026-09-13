@@ -65,6 +65,19 @@ class FunctionToMinimize(ABC):
         self.number_of_gradients: int = 0
         self.number_of_hessians: int = 0
 
+    def snapshot_state(self) -> object | None:
+        """Return optional JSON-compatible objective state for a checkpoint.
+
+        Objectives that maintain caches may override this hook.  The optimizer
+        never relies on it for its numerical state, and the default keeps the
+        historical objective protocol unchanged.
+        """
+        return None
+
+    def restore_state(self, state: object | None) -> None:
+        """Restore optional state previously returned by ``snapshot_state``."""
+        del state
+
     @abstractmethod
     def dimension(self) -> int:
         """Provides the number of unsorted_set_of_variables of the problem"""
