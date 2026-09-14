@@ -1,6 +1,6 @@
 # Release notes
 
-## Unreleased
+## 0.0.13 (2026-09-14)
 
 - Added schema version 1 resumable state for Biogeme trust-region BFGS.
 - `TrustRegionBFGSState.to_dict()` produces JSON-compatible array payloads with
