@@ -5,6 +5,10 @@
 - Preserved the historical three-item tuple shape of `OptimizationResults` for
   Biogeme and older callers while exposing resumable state through
   `result.state`.
+- Restored compatibility with Biogeme's optimizer integration, which unpacks
+  optimization results as `(solution, messages, convergence)`.
+- Added regression coverage for the Biogeme-style three-value unpacking and a
+  Biogeme estimation smoke test using the state-enabled optimizer.
 
 ## 0.0.13 (2026-09-14)
 
