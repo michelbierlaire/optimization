@@ -98,6 +98,23 @@ def test_gradient_only_quadratic_returns_typed_result() -> None:
     assert objective.nbr_hessian_evaluations() == 0
 
 
+def test_result_preserves_biogeme_three_value_unpacking() -> None:
+    result = bfgs_trust_region_for_biogeme(
+        GradientOnlyQuadratic(),
+        np.array([3.0, -3.0]),
+        [(None, None), (None, None)],
+        ['x', 'y'],
+        _options(),
+    )
+
+    solution, messages, convergence = result
+    np.testing.assert_array_equal(solution, result.solution)
+    assert messages is result.messages
+    assert convergence is result.convergence
+    assert len(result) == 3
+    assert result.state is not None
+
+
 def test_batch_compatible_public_methods() -> None:
     objective = GradientOnlyQuadratic()
     objective.set_variables(np.array([2.0, -2.0]))

@@ -1,5 +1,11 @@
 # Release notes
 
+## Unreleased
+
+- Preserved the historical three-item tuple shape of `OptimizationResults` for
+  Biogeme and older callers while exposing resumable state through
+  `result.state`.
+
 ## 0.0.13 (2026-09-14)
 
 - Added schema version 1 resumable state for Biogeme trust-region BFGS.

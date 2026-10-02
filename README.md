@@ -22,7 +22,9 @@ from biogeme_optimization.optimization import bfgs_trust_region_for_biogeme
 `bfgs_trust_region_for_biogeme` accepts an objective, a one-dimensional NumPy
 initial vector, one bound pair and variable name per parameter, and an options
 mapping containing `maxiter`, `tolerance`, and `objective_tolerance`. It returns
-a typed result with `solution`, `convergence`, and `messages` attributes.
+a typed result with `solution`, `convergence`, and `messages` attributes. The
+result retains its historical three-item tuple shape for Biogeme callers;
+resumable state is exposed as the separate `result.state` attribute.
 
 The trust-region BFGS path requires only objective and gradient evaluation;
 implementing a Hessian is optional. The historical `bounds` argument remains
